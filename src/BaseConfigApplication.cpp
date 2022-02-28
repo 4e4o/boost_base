@@ -8,7 +8,8 @@
 
 BaseConfigApplication::BaseConfigApplication(const std::string& n,
                                              int argc, char** argv)
-    : AApplication(n, argc, argv) {
+    : AApplication(n, argc, argv),
+      m_config(new Config()) {
     debug_print(boost::format("BaseConfigApplication::BaseConfigApplication %1%") % this);
 }
 
@@ -30,6 +31,10 @@ bool BaseConfigApplication::processArgs() {
     return true;
 }
 
+Config* BaseConfigApplication::config() {
+    return m_config.get();
+}
+
 int BaseConfigApplication::exec() {
     if (!processArgs())
         return 1;
@@ -38,10 +43,9 @@ int BaseConfigApplication::exec() {
     AApplication::exec();
 
     try {
-        std::unique_ptr<Config> config(createConfig());
         Config::TItems items;
 
-        if (!config->readConfig(items, m_configPath))
+        if (!m_config->readConfig(items, m_configPath))
             return 2;
 
         start(items);

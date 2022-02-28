@@ -21,7 +21,7 @@ public:
     void setSession(std::shared_ptr<Session>);
     std::shared_ptr<Session> session() const;
 
-    void connect(std::string ip, unsigned short port);
+    void connect(const std::string& ip, unsigned short port);
 
     boost::signals2::signal<void (bool)> onConnect;
 

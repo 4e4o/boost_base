@@ -22,7 +22,7 @@ std::shared_ptr<Session> Client::session() const {
     return m_session;
 }
 
-void Client::connect(std::string ip, unsigned short port) {
+void Client::connect(const std::string& ip, unsigned short port) {
     if (m_session == nullptr)
         return;
 

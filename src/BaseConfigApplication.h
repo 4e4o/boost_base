@@ -18,10 +18,11 @@ public:
 
     int exec() override final;
 
+    Config* config();
+
 protected:
     typedef std::list<std::unique_ptr<ConfigItem>> TConfigItems;
 
-    virtual Config* createConfig() = 0;
     virtual void start(TConfigItems&) = 0;
     virtual void doExit() {}
     virtual ThreadPool* createThreadPool();
@@ -33,6 +34,7 @@ private:
     bool processArgs();
 
     std::string m_configPath;
+    std::unique_ptr<Config> m_config;
     std::shared_ptr<ThreadPool> m_threadPool;
 };
 

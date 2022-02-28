@@ -1,27 +1,15 @@
 #ifndef CONFIG_HPP
 #define CONFIG_HPP
 
-#include "Misc/GenericFactory.hpp"
-#include "ConfigItem.hpp"
+#include "Config/ArrayParser.hpp"
 
-#include <list>
-#include <memory>
-
-namespace boost::json {
-class object;
-}
-
-class Config : public GenericFactory<ConfigItem> {
+class Config : public ArrayParser {
 public:
-    typedef std::list<std::unique_ptr<ConfigItem>> TItems;
-
-    Config(const std::string&);
+    Config();
     virtual ~Config();
 
+    void setKey(const std::string &key);
     bool readConfig(TItems&, const std::string&);
-
-protected:
-    virtual ConfigItem* parseItem(const boost::json::object&) = 0;
 
 private:
     std::string m_key;
