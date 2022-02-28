@@ -23,7 +23,7 @@ public:
 protected:
     typedef std::list<std::unique_ptr<ConfigItem>> TConfigItems;
 
-    virtual void start(TConfigItems&) = 0;
+    virtual bool start(TConfigItems&) = 0;
     virtual void doExit() {}
     virtual ThreadPool* createThreadPool();
 

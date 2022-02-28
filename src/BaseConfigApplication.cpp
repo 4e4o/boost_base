@@ -48,7 +48,8 @@ int BaseConfigApplication::exec() {
         if (!m_config->readConfig(items, m_configPath))
             return 2;
 
-        start(items);
+        if (!start(items))
+            return 1;
 
         m_threadPool->run();
         m_threadPool->stop(true);
