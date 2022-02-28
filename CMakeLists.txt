@@ -20,4 +20,4 @@ target_sources(${PROJECT_NAME} PRIVATE ${PRJ_SRCS})
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC ${OPENSSL_LIBRARIES} Boost::program_options Boost::system Boost::thread rt)
-target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC src/)
+target_include_directories(${PROJECT_NAME} PUBLIC src/)
