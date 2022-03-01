@@ -12,6 +12,8 @@
 #include "Misc/StrandHolder.hpp"
 #include "Network/TCPSocket.hpp"
 
+class Timer;
+
 class Session : public enable_shared_from_this_virtual<Session>, public StrandHolder {
 public:
     typedef std::function<void()> TEvent;
@@ -24,6 +26,8 @@ public:
     void close();
 
     void startSSL(bool client, TEvent);
+
+    void setReceiveTimeout(int sec);
 
     virtual void readSome(std::size_t maxSize = READ_BUFFER_SIZE);
     virtual void readAll(std::size_t size);
@@ -49,12 +53,17 @@ private:
     bool isDisconnect(const boost::system::error_code&);
     void doWrite(const uint8_t *ptr, std::size_t size);
     void disconnectAllSlots();
+    void startReceiveTimeout();
+    void emitReceivedData(const uint8_t *ptr, std::size_t size,
+                          const boost::system::error_code &ec,
+                          const boost::optional<std::size_t>& expected = boost::none);
 
     TCPSocket m_socket;
     std::array<uint8_t, READ_BUFFER_SIZE> m_readBuffer;
     bool m_writing;
     bool m_closeOnWrite;
     bool m_closed;
+    std::unique_ptr<Timer> m_receiveTimer;
 };
 
 #endif // SESSION_H
