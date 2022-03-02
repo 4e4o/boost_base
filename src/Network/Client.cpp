@@ -1,17 +1,18 @@
 #include "Client.hpp"
 #include "Network/Session.hpp"
 #include "AApplication.h"
+#include "Misc/Debug.hpp"
 
 #include <boost/asio/ip/tcp.hpp>
 
 Client::Client(boost::asio::io_context &io)
     : StrandHolder(io),
       m_connectTimer(io) {
-    AAP->log(boost::format("Client::Client %1%") % this);
+    debug_print(boost::format("Client::Client %1%") % this);
 }
 
 Client::~Client() {
-    AAP->log(boost::format("Client::~Client %1%") % this);
+    debug_print(boost::format("Client::~Client %1%") % this);
 }
 
 void Client::setSession(std::shared_ptr<Session> c) {

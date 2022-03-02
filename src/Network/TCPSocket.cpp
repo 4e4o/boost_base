@@ -1,5 +1,6 @@
 #include "TCPSocket.hpp"
 #include "AApplication.h"
+#include "Misc/Debug.hpp"
 
 static boost::asio::ssl::context* createSSLContext(const std::string& keysPath = "",
                                                    const std::string& entityName = "entity") {
@@ -85,7 +86,7 @@ void TCPSocket::initSSL(boost::asio::ssl::stream_base::handshake_type type,
     m_socket->set_verify_mode(verify_peer);
 
     m_socket->async_handshake(type, [r] (const error_code& error) {
-        AAP->log(boost::format("initSSL async_handshake error = %1%") % error.message().c_str());
+        debug_print(boost::format("initSSL async_handshake error = %1%") % error.message().c_str());
         r(!error);
     });
 }

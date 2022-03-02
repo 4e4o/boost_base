@@ -1,6 +1,7 @@
 #include "Session.hpp"
 #include "AApplication.h"
 #include "Misc/Timer.hpp"
+#include "Misc/Debug.hpp"
 
 #include <boost/asio/write.hpp>
 #include <boost/asio/read.hpp>
@@ -15,12 +16,12 @@ Session::Session(boost::asio::io_context &io, TCPSocket &&sock)
       m_writing(false),
       m_closeOnWrite(false),
       m_closed(false) {
-    AAP->log(boost::format("Session::Session %1%") % this);
+    debug_print(boost::format("Session::Session %1%") % this);
 }
 
 Session::~Session() {
     onDestroy();
-    AAP->log(boost::format("Session::~Session %1%") % this);
+    debug_print(boost::format("Session::~Session %1%") % this);
 }
 
 void Session::start() {
@@ -66,7 +67,7 @@ void Session::setReceiveTimeout(int sec) {
         if (m_closed)
             return;
 
-        AAP->log(boost::format("Session receive timeout %1%") % this);
+        debug_print(boost::format("Session receive timeout %1%") % this);
         close();
     });
 }
@@ -81,7 +82,7 @@ void Session::startReceiveTimeout() {
 void Session::emitReceivedData(const uint8_t *ptr, std::size_t size,
                                const boost::system::error_code &ec,
                                const boost::optional<std::size_t>& expected) {
-    //AAP->log(boost::format("Session::emitReceivedData: %1% %2% %3% %4% %5%") % this % expected % exact % size % ec);
+    //debug_print(boost::format("Session::emitReceivedData: %1% %2% %3% %4% %5%") % this % expected % exact % size % ec);
 
     if (m_receiveTimer.get() != nullptr) {
         m_receiveTimer->stopTimer();
@@ -160,7 +161,7 @@ void Session::startSSL(bool client, TEvent r) {
 
 void Session::errorHandler(const boost::system::error_code& ec) {
     if (!isDisconnect(ec)) {
-        AAP->log(boost::format("Session::errorHandler %1% %2%") % this % ec.message().c_str());
+        debug_print(boost::format("Session::errorHandler %1% %2%") % this % ec.message().c_str());
         onError(ec);
     }
 
@@ -182,18 +183,10 @@ void Session::close() {
         if (self->m_closed)
             return;
 
-        try {
-            self->m_socket.close();
-        } catch(...) { }
-
-        try {
-            self->m_closed = true;
-            self->onClose();
-            self->disconnectAllSlots();
-            //AAP->log("socket close ok %p", self.get());
-        } catch (std::exception& e) {
-            AAP->log(boost::format("socket close exception %1% %2%") % self.get() % e.what());
-        }
+        self->m_socket.close();
+        self->m_closed = true;
+        self->onClose();
+        self->disconnectAllSlots();
     });
 }
 
@@ -211,7 +204,7 @@ void Session::closeOnWrite() {
     post([self]() {
         self->m_closeOnWrite = true;
 
-        //        AAP->log("Session::closeOnWrite %p %i", self.get(), self->m_writing);
+        //debug_print("Session::closeOnWrite %p %i", self.get(), self->m_writing);
 
         if (!self->m_writing)
             self->close();
