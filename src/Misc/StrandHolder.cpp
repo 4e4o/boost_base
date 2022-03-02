@@ -11,11 +11,11 @@ StrandHolder::~StrandHolder() {
         m_strand.release();
 }
 
-boost::asio::io_context::strand& StrandHolder::strand() {
+boost::asio::io_context::strand& StrandHolder::strand() const {
     return *m_strand.get();
 }
 
-boost::asio::io_context &StrandHolder::io() {
+boost::asio::io_context &StrandHolder::io() const {
     return m_io;
 }
 
