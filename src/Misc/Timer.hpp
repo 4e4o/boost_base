@@ -16,6 +16,8 @@ public:
     void startTimer();
     void stopTimer();
 
+    int sec() const;
+
 private:
     int m_sec;
     boost::asio::deadline_timer m_timeout;

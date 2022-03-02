@@ -63,7 +63,8 @@ void ClientManager::startImpl() {
             if (self->m_stopped)
                 return;
 
-            self->startTimer();
+            if (self->sec() > 0)
+                self->startTimer();
         });
     });
 

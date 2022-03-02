@@ -6,13 +6,17 @@
 namespace boost::json {
 class string;
 class object;
+class value;
 }
 
 class ConfigItem {
 public:
     virtual ~ConfigItem();
 
-    static std::string toStdString(const boost::json::string& s1);
+    virtual void init(const boost::json::object&);
+
+    template<typename T, bool optional = false>
+    static T get(const boost::json::object&, const std::string&);
     static bool isEnabled(const boost::json::object&);
 };
 

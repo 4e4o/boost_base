@@ -26,6 +26,7 @@ bool ArrayParser::parseArray(const boost::json::array& input, TItems& result) {
             if (i == nullptr)
                 continue;
 
+            i->init(obj);
             result.emplace_back(i);
         }
     } catch (std::exception const& e) {

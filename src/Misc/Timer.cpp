@@ -28,3 +28,7 @@ void Timer::stopTimer() {
     boost::system::error_code ec;
     m_timeout.cancel(ec);
 }
+
+int Timer::sec() const {
+    return m_sec;
+}

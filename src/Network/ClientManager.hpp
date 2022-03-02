@@ -14,7 +14,7 @@ class ClientManager
         public GenericFactory<Session>,
         public Timer {
 public:
-    ClientManager(boost::asio::io_context&, int);
+    ClientManager(boost::asio::io_context&, int = 0);
     ~ClientManager();
 
     void start(const std::string& ip, unsigned short port);
