@@ -34,10 +34,11 @@ Config* BaseConfigApplication::config() {
 }
 
 int BaseConfigApplication::exec() {
+    m_threadPool.reset(createThreadPool());
+
     if (!processArgs())
         return 1;
 
-    m_threadPool.reset(createThreadPool());
     AApplication::exec();
 
     try {
