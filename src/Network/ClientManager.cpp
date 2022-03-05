@@ -6,8 +6,9 @@
 
 using boost::signals2::connection;
 
-ClientManager::ClientManager(boost::asio::io_context& io, int reconnectSec)
-    : Timer(io, reconnectSec), m_stopped(false) {
+ClientManager::ClientManager(boost::asio::io_context& io, const Timer::TSec& reconnectSec)
+    : Timer(io, reconnectSec),
+      m_stopped(false) {
     debug_print(boost::format("ClientManager::ClientManager %1%") % this);
     onTimeout.connect([this](Timer*) {
         onReconnectTick();
@@ -18,6 +19,16 @@ ClientManager::~ClientManager() {
     debug_print(boost::format("ClientManager::~ClientManager %1%") % this);
 }
 
+bool ClientManager::connected() const {
+    STRAND_ASSERT(this);
+    auto sp = m_curSession.lock();
+
+    if (!sp)
+        return false;
+
+    return sp->started();
+}
+
 void ClientManager::onReconnectTick() {
     if (m_stopped)
         return;
@@ -25,11 +36,12 @@ void ClientManager::onReconnectTick() {
     postStart();
 }
 
-void ClientManager::start(const std::string& ip, unsigned short port) {
+void ClientManager::start(const std::string& ip, unsigned short port, const Timer::TSec& sec) {
     auto self = shared_from_this();
-    post([self, ip, port] {
+    post([self, ip, port, sec] {
         self->m_ip = ip;
         self->m_port = port;
+        self->m_connectTimeout = sec;
         self->postStart();
     });
 }
@@ -42,6 +54,9 @@ void ClientManager::postStart() {
 }
 
 void ClientManager::startImpl() {
+    if (m_stopped)
+        return;
+
     std::shared_ptr<Session> session(create<Session>(io()));
     std::shared_ptr<Client> client(new Client(io()));
     client->setSession(session);
@@ -49,38 +64,32 @@ void ClientManager::startImpl() {
     session->setStrand(this, false);
     client->setStrand(this, false);
 
+    m_curSession = session;
     onNewSession(session.get());
 
-    m_closeClient.connect(decltype(m_closeClient)::slot_type(
-                              &Session::close, session.get()).track_foreign(session));
+    m_close.connect(decltype(m_close)::slot_type(
+                        &Session::close, session.get()).track_foreign(session));
 
     auto self = shared_from_this();
 
-    session->onDestroy.connect_extended([self](const connection &c) {
+    session->onDestroy.connect_extended([self](const connection &c, bool) {
         c.disconnect();
 
         self->post([self] {
             if (self->m_stopped)
                 return;
 
-            if (self->sec() > 0)
-                self->startTimer();
+            self->startTimer();
+
+            if (self->sec().has_value()) {
+                debug_print(boost::format("ClientManager reconnect started %1% %2% sec") % self.get() % self->sec().value());
+            } else {
+                debug_print(boost::format("ClientManager reconnect not set %1%") % self.get());
+            }
         });
     });
 
-    client->onConnect.connect_extended([self, session](const connection &c, bool connected) {
-        c.disconnect();
-        STRAND_ASSERT(self.get());
-
-        if (self->m_stopped)
-            return;
-
-        if (connected) {
-            session->start();
-        }
-    });
-
-    client->connect(m_ip, m_port);
+    client->connect(m_ip, m_port, m_connectTimeout);
 }
 
 void ClientManager::stop() {
@@ -90,7 +99,7 @@ void ClientManager::stop() {
             return;
 
         self->m_stopped = true;
-        self->m_closeClient();
+        self->m_close();
         self->stopTimer();
     });
 }

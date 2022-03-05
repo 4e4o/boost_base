@@ -8,18 +8,20 @@
 
 class Timer : public StrandHolder {
 public:
-    Timer(boost::asio::io_context&, int);
+    typedef boost::optional<int> TSec;
+
+    Timer(boost::asio::io_context&, const TSec& = boost::none);
     virtual ~Timer();
 
     boost::signals2::signal<void(Timer*)> onTimeout;
 
-    void startTimer();
+    void startTimer(const TSec& = boost::none);
     void stopTimer();
 
-    int sec() const;
+    const TSec& sec() const;
 
 private:
-    int m_sec;
+    TSec m_sec;
     boost::asio::deadline_timer m_timeout;
 };
 

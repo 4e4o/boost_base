@@ -4,7 +4,8 @@
 #include <AApplication.h>
 
 #include <boost/asio/io_context.hpp>
-#include <boost/signals2.hpp>
+#include <boost/asio/post.hpp>
+#include <list>
 
 class Config;
 class ConfigItem;
@@ -20,6 +21,11 @@ public:
 
     Config* config();
 
+    template <class Callable>
+    void post(Callable&& c) {
+        boost::asio::post(io(), std::forward<Callable>(c));
+    }
+
 protected:
     typedef std::list<std::unique_ptr<ConfigItem>> TConfigItems;
 
@@ -27,7 +33,7 @@ protected:
     virtual void doExit() {}
     virtual ThreadPool* createThreadPool();
 
-    boost::asio::io_context &io();
+    boost::asio::io_context &io() const;
 
 private:
     void onExitRequest() override final;

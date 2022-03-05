@@ -15,21 +15,36 @@ Session::Session(boost::asio::io_context &io, TCPSocket &&sock)
       m_socket(std::move(sock)),
       m_writing(false),
       m_closeOnWrite(false),
-      m_closed(false) {
+      m_closed(false),
+      m_started(false) {
     debug_print(boost::format("Session::Session %1%") % this);
 }
 
 Session::~Session() {
-    onDestroy();
+    onDestroy(m_started);
     debug_print(boost::format("Session::~Session %1%") % this);
 }
 
 void Session::start() {
     auto self = shared_from_this();
     post([self]() {
-        self->m_socket.init();
+        if (self->m_closed)
+            return;
+
+        self->preStart();
         self->startImpl();
     });
+}
+
+bool Session::started() const {
+    STRAND_ASSERT(this);
+    return m_started;
+}
+
+void Session::preStart() {
+    m_started = true;
+    onStart();
+    m_socket.init();
 }
 
 void Session::startImpl() {
@@ -195,6 +210,7 @@ void Session::disconnectAllSlots() {
     onError.disconnect_all_slots();
     onWriteDone.disconnect_all_slots();
     onClose.disconnect_all_slots();
+    onStart.disconnect_all_slots();
     // onDestroy не дисконектим, он должен вызываться в деструкторе
 }
 

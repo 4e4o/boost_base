@@ -4,8 +4,6 @@
 #include <ThreadPool.hpp>
 #include <Misc/Debug.hpp>
 
-#include <boost/asio/post.hpp>
-
 BaseConfigApplication::BaseConfigApplication(const std::string& n,
                                              int argc, char** argv)
     : AApplication(n, argc, argv),
@@ -64,13 +62,13 @@ ThreadPool* BaseConfigApplication::createThreadPool() {
     return new ThreadPool();
 }
 
-boost::asio::io_context &BaseConfigApplication::io() {
+boost::asio::io_context &BaseConfigApplication::io() const {
     return m_threadPool->io();
 }
 
 void BaseConfigApplication::onExitRequest() {
     // ensure that exit logic will run after m_threadPool is started
-    boost::asio::post(m_threadPool->io(), [this]() {
+    post([this] {
         debug_print("BaseConfigApplication::onExitRequest");
         doExit();
         m_threadPool->stop(false);

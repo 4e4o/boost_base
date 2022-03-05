@@ -1,14 +1,15 @@
 #include "Client.hpp"
 #include "Network/Session.hpp"
-#include "AApplication.h"
 #include "Misc/Debug.hpp"
 
 #include <boost/asio/ip/tcp.hpp>
 
 Client::Client(boost::asio::io_context &io)
-    : StrandHolder(io),
-      m_connectTimer(io) {
+    : Timer(io, DEFAULT_CONNECT_TIMEOUT_SEC) {
     debug_print(boost::format("Client::Client %1%") % this);
+    onTimeout.connect([this] (Timer*) {
+        m_session->close();
+    });
 }
 
 Client::~Client() {
@@ -23,7 +24,7 @@ std::shared_ptr<Session> Client::session() const {
     return m_session;
 }
 
-void Client::connect(const std::string& ip, unsigned short port) {
+void Client::connect(const std::string& ip, unsigned short port, const Timer::TSec& connectTimeout) {
     if (m_session == nullptr)
         return;
 
@@ -35,16 +36,14 @@ void Client::connect(const std::string& ip, unsigned short port) {
 
     m_session->socket().async_connect(endpoint,
                                       strand().wrap([self](const error_code& ec) {
-        self->m_connectTimer.cancel();
-        self->onConnect(!ec);
+        self->stopTimer();
+        debug_print(boost::format("Client::connect result %1% %2%") % self.get() % !ec);
+
+        if (!ec) {
+            self->m_session->start();
+        }
     }));
 
-    m_connectTimer.expires_after(boost::asio::chrono::seconds(CONNECT_TIMEOUT_SEC));
-    m_connectTimer.async_wait(strand().wrap([self](const error_code& ec) {
-        if (ec == boost::asio::error::operation_aborted)
-            return;
-
-        self->m_session->close();
-        self->onConnect(false);
-    }));
+    startTimer(connectTimeout);
+    debug_print(boost::format("Client::connect started %1% %2% sec") % this % sec().value());
 }
