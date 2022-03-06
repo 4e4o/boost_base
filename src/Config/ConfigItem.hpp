@@ -13,7 +13,7 @@ class ConfigItem {
 public:
     virtual ~ConfigItem();
 
-    virtual void init(const boost::json::object&);
+    virtual bool init(const boost::json::object&);
 
     template<typename T, bool optional = false>
     static T get(const boost::json::object&, const std::string&);

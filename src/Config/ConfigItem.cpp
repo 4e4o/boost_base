@@ -6,7 +6,8 @@
 ConfigItem::~ConfigItem() {
 }
 
-void ConfigItem::init(const boost::json::object&) {
+bool ConfigItem::init(const boost::json::object&) {
+    return true;
 }
 
 template<typename T, bool optional>

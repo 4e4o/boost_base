@@ -21,13 +21,15 @@ bool ArrayParser::parseArray(const boost::json::array& input, TItems& result) {
             if (!ConfigItem::isEnabled(obj))
                 continue;
 
-            ConfigItem *i = create<ConfigItem>(obj);
+            std::unique_ptr<ConfigItem> i(create<ConfigItem>(obj));
 
-            if (i == nullptr)
+            if (i.get() == nullptr)
                 continue;
 
-            i->init(obj);
-            result.emplace_back(i);
+            if (!i->init(obj))
+                return false;
+
+            result.emplace_back(i.release());
         }
     } catch (std::exception const& e) {
         AAP->log(boost::format("Config array parse error: %1%") % e.what());
