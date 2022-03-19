@@ -15,6 +15,8 @@ add_library(${PROJECT_NAME})
 
 file(GLOB_RECURSE PRJ_SRCS src/*.c src/*.cpp src/*.h src/*.hpp)
 
+target_compile_definitions(${PROJECT_NAME} PUBLIC BOOST_ASIO_NO_DEPRECATED=1)
+
 target_sources(${PROJECT_NAME} PRIVATE ${PRJ_SRCS})
 
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})

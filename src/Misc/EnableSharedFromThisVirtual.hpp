@@ -25,7 +25,7 @@ template<typename T>
 struct enable_shared_from_this_virtual: virtual enable_shared_from_this_virtual_base {
     typedef enable_shared_from_this_virtual_base base_type;
 
-public:
+protected:
     template<typename TCasted = T>
     std::shared_ptr<TCasted> shared_from_this() {
         return std::dynamic_pointer_cast<TCasted>(std::shared_ptr<T>(base_type::shared_from_this(), static_cast<T*>(this)));
@@ -35,6 +35,17 @@ public:
     std::shared_ptr<TCasted const> shared_from_this() const {
         return std::dynamic_pointer_cast<TCasted const>(std::shared_ptr<T const>(base_type::shared_from_this(), static_cast<T const*>(this)));
     }
+
+    template<typename TCasted = T>
+    std::weak_ptr<TCasted> weak_from_this() {
+        return shared_from_this<TCasted>();
+    }
+
+    template<typename TCasted = T>
+    std::weak_ptr<TCasted const> weak_from_this() const {
+        return shared_from_this<TCasted>();
+    }
 };
 
 #endif // ENABLE_SHARED_FROM_THIS_VIRTUAL_HPP
+

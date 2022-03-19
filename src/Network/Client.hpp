@@ -1,28 +1,46 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-#include "Misc/Timer.hpp"
+#include "Misc/TimeDuration.hpp"
+#include "Misc/StrandHolder.hpp"
+#include "Misc/GenericFactory.hpp"
+#include "Misc/TimerForward.hpp"
+#include "Network/Session/SessionForward.hpp"
 
-#include <boost/signals2.hpp>
+#include <boost/signals2/signal.hpp>
 
-#include <memory>
-
-class Session;
-
-class Client : public std::enable_shared_from_this<Client>, public Timer {
+class Client : public StrandHolder, public GenericFactory<StrandHolder> {
 public:
-    Client(boost::asio::io_context &io);
+    Client(boost::asio::io_context &io, const TTimeDuration& = boost::none);
     virtual ~Client();
 
-    void setSession(std::shared_ptr<Session>);
-    std::shared_ptr<Session> session() const;
+    void start(const std::string& ip, unsigned short port, const TTimeDuration& = boost::none);
+    void stop();
 
-    void connect(const std::string& ip, unsigned short port, const Timer::TSec& = boost::none);
+    bool connected() const;
+
+    void enableSSL();
+
+    boost::signals2::signal<void(TWSession)> newSession;
 
 private:
-    static constexpr int DEFAULT_CONNECT_TIMEOUT_SEC = 10;
+    void run();
+    void restart();
+    void onSession(TSession);
 
-    std::shared_ptr<Session> m_session;
+    enum class State {
+        INITIAL,
+        STARTED,
+        STOPPED
+    };
+
+    State m_state;
+    std::string m_ip;
+    unsigned short m_port;
+    TTimer m_connectTimer;
+    TTimer m_restartTimer;
+    TWSession m_session;
+    boost::signals2::signal<void()> m_close;
 };
 
 #endif // CLIENT_H

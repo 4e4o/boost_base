@@ -16,8 +16,10 @@ public:
     void stop(bool join);
 
 private:
+    using work_guard_type = boost::asio::executor_work_guard<boost::asio::io_context::executor_type>;
+
     boost::asio::io_context m_io;
-    std::unique_ptr<boost::asio::io_context::work> m_work;
+    work_guard_type m_workGuard;
     std::vector<std::thread> m_threads;
     int m_threadNum;
 };

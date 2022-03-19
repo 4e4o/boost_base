@@ -12,30 +12,48 @@
 #include "ClassName.hpp"
 #include "LambdaTraits.hpp"
 
+/**
+ * Обобщённый фактори.
+ *
+ * Позволяет регистрировать типы, производные от Base для последующего создания.
+ */
+
 template<class Base>
 class GenericFactory {
   public:
-    // Для дефолтных типов
+    /**
+     *  Регистрация Дефолтного, производного от Base типа
+     *  Дефолтный тип имеется ввиду прямой, не производный тип
+     */
+
     template<typename T, typename... CreatorArgs>
     void registerDefaultType() {
         return registerType<T, T, CreatorArgs...>();
     }
 
-    // для простых типов без доп. параметров в конструкторах
+    /**
+     *  Регистрация Производного от Base типа
+     */
+
     template<typename T, typename Derived, typename... CreatorArgs>
     requires std::derived_from<Derived, T>
     void registerType() {
         typedef typename MakeCreator<CreatorArgs...>::TCreator TCreator;
 
         TCreator creator{[] (auto &&... args) -> T * {
-                return new Derived(args...);
+                return new Derived(std::forward<CreatorArgs>(args)...);
             }
         };
 
         insert <T>(std::move(creator));
     }
 
-    // для лямбд
+    /**
+     *  Регистрация Производного от Base типа
+     *  сюда передаём лямбду
+     *  лямбда является конструктором, которая должа возвратить новый инстанс типа
+     */
+
     template<LambdaPtrResultDerived<Base> Callable>
     void registerType(Callable &&c) {
         typedef typename
@@ -46,6 +64,15 @@ class GenericFactory {
 
         insert <RetType>(std::move(creator));
     }
+
+    /**
+     *  Создание эксземпляра типа.
+     *
+     *  Если тут лезет std::any bad_cast exception,
+     *  то явно укажите типы аргумента конструктора, например:
+     *  было так: create<T1>(arg0), стало так:
+     *  create<T1, const T2&>(arg0)
+     */
 
     template<class T, typename... CreatorArgs>
     requires std::derived_from<T, Base>
