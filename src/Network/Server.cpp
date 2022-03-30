@@ -1,60 +1,51 @@
 #include "Server.hpp"
 #include "Network/Session/Session.hpp"
 #include "Network/Socket/TCP/SSLSocket.hpp"
-#include "Misc/Lifecycle.hpp"
+#include "Misc/Debug.hpp"
 
-using namespace boost::asio;
 using boost::system::error_code;
+using namespace boost::asio;
 
 Server::Server(io_context &io)
-    : StrandHolder(io),
-      m_acceptor(io),
-      m_socket(io),
-      m_stopped(false) {
+    : CoroutineTask(io) {
+    debug_print_this("");
+
     registerDefaultType<Session, Socket*>();
     registerDefaultType<TCPSocket, io_context&, ip::tcp::socket&&>();
 }
 
-void Server::start(const std::string& ip, unsigned short port) {
-    post<true>([this, ip, port] {
-        if (m_stopped)
-            return;
-
-        m_acceptor = Acceptor(io(), ip::tcp::endpoint(ip::make_address_v4(ip), port));
-        doAccept();
-    });
+Server::~Server() {
+    debug_print_this("");
 }
 
 void Server::enableSSL() {
     registerType<TCPSocket, SSLSocket, io_context&, ip::tcp::socket&&>();
 }
 
-void Server::stop() {
-    post<true>([this] {
-        if (m_stopped)
-            return;
-
-        m_stopped = true;
-        error_code ec;
-        m_acceptor.cancel(ec);
-        stopped();
-    });
+void Server::setHandler(const TNewSessionHandler &handler) {
+    m_handler = handler;
 }
 
-void Server::doAccept() {
-    m_acceptor.async_accept(m_socket,
-                            bindExecutor([this](const error_code& ec) {
-        if (m_stopped)
-            return;
+Server::TAwaitResult Server::run(const std::string& ip, unsigned short port) {
+    STRAND_ASSERT(this);
 
-        if (!ec) {
-            TCPSocket *socket = create<TCPSocket, io_context&, ip::tcp::socket&&>(io(), std::move(m_socket));
-            TSession session(create<Session, Socket*>(socket));
-            newSession(session);
-            Lifecycle::connectTrack(stopped, session, &Session::close);
+    using Acceptor = boost::asio::ip::tcp::acceptor;
+    auto acceptor = Acceptor(io(), ip::tcp::endpoint(ip::make_address_v4(ip), port));
+
+    while(running()) {
+        STRAND_ASSERT(this);
+        auto sock = co_await acceptor.async_accept(use_awaitable);
+        STRAND_ASSERT(this);
+        TCPSocket *socket = create<TCPSocket, io_context&, ip::tcp::socket&&>(io(), std::move(sock));
+        TSession session(create<Session, Socket*>(socket));
+        registerStop(session);
+
+        if (m_handler) {
+            if (m_handler(session)) {
+                session->start();
+            }
+        } else {
             session->start();
         }
-
-        doAccept();
-    }));
+    }
 }

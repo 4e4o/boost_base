@@ -48,4 +48,3 @@ protected:
 };
 
 #endif // ENABLE_SHARED_FROM_THIS_VIRTUAL_HPP
-

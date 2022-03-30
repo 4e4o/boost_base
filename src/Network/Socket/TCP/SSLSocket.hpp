@@ -7,8 +7,7 @@
 
 class SSLSocket : public TCPSocket {
 public:
-    SSLSocket(boost::asio::io_context &io);
-    SSLSocket(boost::asio::io_context &io, boost::asio::ip::tcp::socket&& socket);
+    SSLSocket(boost::asio::io_context&, boost::asio::ip::tcp::socket&&);
     virtual ~SSLSocket();
 
     void setClient(bool client);
@@ -19,18 +18,19 @@ public:
     void setSSL(bool);
 
 private:
-    Socket* create(boost::asio::io_context &io) override;
+    SSLSocket(boost::asio::io_context&);
+    Socket* create(boost::asio::io_context&) override;
 
-    void async_read_some(uint8_t*, const std::size_t&, const TDataCallback&) override;
-    void async_read_all(uint8_t*, const std::size_t&, const TDataCallback&) override;
+    TAwaitVoid co_start() override;
+    TAwaitVoid co_close() override;
 
-    void async_write_all(const uint8_t*, const std::size_t&, const TDataCallback&) override;
+    TAwaitSize co_readSome(uint8_t*, const std::size_t&) override;
+    TAwaitVoid co_readAll(uint8_t*, const std::size_t&) override;
+
+    TAwaitVoid co_writeAll(const uint8_t*, const std::size_t&) override;
 
     typedef boost::asio::ssl::stream<boost::asio::ip::tcp::socket> TSocket;
     typedef boost::asio::ssl::context TContext;
-
-    void asyncStartImpl(const TErrorCallback&) override;
-    void async_close(const TErrorCallback&) override;
 
     bool m_ssl;
     bool m_client;

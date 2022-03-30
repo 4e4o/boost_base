@@ -3,32 +3,34 @@
 
 #include <boost/asio/write.hpp>
 #include <boost/asio/read.hpp>
+#include <boost/asio/use_awaitable.hpp>
 
 #define TCP_KEEPIDLE_VALUE      20
 #define TCP_KEEPINTVL_VALUE     10
 #define TCP_KEEPCNT_VALUE       4
 
+using namespace boost::asio;
 using boost::asio::ip::tcp;
 using boost::asio::socket_base;
 using boost::asio::detail::socket_option::integer;
 
-TCPSocket::TCPSocket(boost::asio::io_context &io)
-    : TCPSocket(io, boost::asio::ip::tcp::socket(io)) {
+TCPSocket::TCPSocket(io_context &io)
+    : TCPSocket(io, ip::tcp::socket(io)) {
 }
 
-TCPSocket::TCPSocket(boost::asio::io_context &io, boost::asio::ip::tcp::socket&& socket)
+TCPSocket::TCPSocket(boost::asio::io_context& io, ip::tcp::socket&& socket)
     : Socket(io),
       m_socket(new TSocket(std::move(socket))),
       m_socketOwner(true) {
 }
 
-TCPSocket::~TCPSocket() {    
+TCPSocket::~TCPSocket() {
     if (!m_socketOwner) {
         m_socket.release();
     }
 }
 
-void TCPSocket::setTCPSocket(boost::asio::ip::tcp::socket *s) {
+void TCPSocket::setTCPSocket(ip::tcp::socket *s) {
     if (!m_socketOwner) {
         m_socket.release();
     }
@@ -51,47 +53,42 @@ void TCPSocket::setKeepAlive(bool enable) {
     }
 }
 
-void TCPSocket::asyncStartImpl(const TErrorCallback& c) {
-    post([this, c] {
-        setNagle(false);
-        setKeepAlive(true);
-        boost::system::error_code ec;
-        c(ec);
-    });
+TAwaitVoid TCPSocket::co_start() {
+    co_await Socket::co_start();
+    setNagle(false);
+    setKeepAlive(true);
+    co_return;
 }
 
-void TCPSocket::async_close(const TErrorCallback& c) {
-    post([this, c] {
-        force_close(c);
-    });
+TAwaitVoid TCPSocket::co_close() {
+    forceClose(*m_socket);
+    co_return;
 }
 
-void TCPSocket::async_read_some(uint8_t* ptr, const std::size_t &size, const TDataCallback &c) {
-    m_socket->async_read_some(boost::asio::buffer(ptr, size), bindExecutor(c));
+TAwaitSize TCPSocket::co_readSome(uint8_t *ptr, const std::size_t& size) {
+    co_return co_await m_socket->async_read_some(buffer(ptr, size), use_awaitable);
 }
 
-void TCPSocket::async_read_all(uint8_t* ptr, const std::size_t &size, const TDataCallback &c) {
-    boost::asio::async_read(*m_socket, boost::asio::buffer(ptr, size), bindExecutor(c));
+TAwaitVoid TCPSocket::co_readAll(uint8_t* ptr, const std::size_t& size) {
+    co_await async_read(*m_socket, buffer(ptr, size), use_awaitable);
 }
 
-void TCPSocket::async_write_all(const uint8_t*ptr, const std::size_t& size, const TDataCallback& c) {
-    boost::asio::async_write(*m_socket, boost::asio::buffer(ptr, size), bindExecutor(c));
+TAwaitVoid TCPSocket::co_writeAll(const uint8_t* ptr, const std::size_t &size) {
+    co_await async_write(*m_socket, buffer(ptr, size), use_awaitable);
 }
 
 void TCPSocket::cancel() {
-    debug_print(boost::format("TCPSocket::cancel %1%") % this);
+    debug_print_this("");
     boost::system::error_code ec;
     m_socket->cancel(ec);
 }
 
-void TCPSocket::force_close(const TErrorCallback& c) {
-    debug_print(boost::format("TCPSocket::force_close %1%") % this);
-    boost::system::error_code ec1, ec2;
-    m_socket->shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec1);
-    m_socket->close(ec2);
-    c(ec2);
+Socket* TCPSocket::create(boost::asio::io_context& io) {
+    return new TCPSocket(io);
 }
 
-Socket* TCPSocket::create(boost::asio::io_context &io) {
-    return new TCPSocket(io);
+void TCPSocket::forceClose(TSocket& sock) {
+    boost::system::error_code ec1, ec2;
+    sock.shutdown(ip::tcp::socket::shutdown_both, ec1);
+    sock.close(ec2);
 }

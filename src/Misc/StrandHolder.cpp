@@ -1,30 +1,26 @@
 #include "StrandHolder.hpp"
 
 StrandHolder::StrandHolder(boost::asio::io_context &io)
-    : m_io(io),
-      m_strand(new boost::asio::io_context::strand(io)),
+    : IOContextHolder(io),
+      m_executor(new TStrandExecutor(boost::asio::make_strand(io))),
       m_other(nullptr) {
 }
 
 StrandHolder::~StrandHolder() {
 }
 
-boost::asio::io_context &StrandHolder::io() const {
-    return m_io;
-}
-
 void StrandHolder::setStrand(StrandHolder* s) {
     m_other = s;
-    m_strand.reset();
+    m_executor.reset();
 }
 
-boost::asio::io_context::strand& StrandHolder::strand() const {
+TStrandExecutor& StrandHolder::executor() const {
     if (m_other != nullptr)
-        return m_other->strand();
+        return m_other->executor();
 
-    return *m_strand.get();
+    return *m_executor.get();
 }
 
 bool StrandHolder::running_in_strand_thread() const {
-    return strand().running_in_this_thread();
+    return executor().running_in_this_thread();
 }

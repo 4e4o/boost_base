@@ -2,61 +2,55 @@
 #define STRAND_HOLDER_HPP
 
 #include "Misc/EnableSharedFromThisVirtual.hpp"
+#include "IOContextHolder.hpp"
+#include "StrandExecutor.hpp"
 
-#include <boost/asio/strand.hpp>
-#include <boost/asio/io_context.hpp>
-#include <boost/asio/bind_executor.hpp>
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/detached.hpp>
 
 #define STRAND_ASSERT(s) assert((s)->running_in_strand_thread())
 
-class StrandHolder : public enable_shared_from_this_virtual<StrandHolder> {
+class StrandHolder : public enable_shared_from_this_virtual<StrandHolder>, public IOContextHolder {
 public:
     StrandHolder(boost::asio::io_context&);
     virtual ~StrandHolder();
 
-    boost::asio::io_context& io() const;
-
     void setStrand(StrandHolder*);
 
-    template<class Callable>
-    auto bindExecutor(Callable&& c) {
-        return boost::asio::bind_executor(strand(), std::forward<Callable>(c));
+    template <bool SelfLock = false, typename CompletionToken = decltype(boost::asio::detached), class Callable>
+    auto spawn(Callable&& c, CompletionToken ct = boost::asio::detached) const {
+        return boost::asio::co_spawn(executor(), wrap<SelfLock>(std::forward<Callable>(c)), ct);
     }
 
-    template <bool Lock = false, class Callable>
-    void post(Callable&& c) {
-        if constexpr (Lock) {
-            boost::asio::post(bindExecutor(wrapLocked(std::forward<Callable>(c))));
-        } else {
-            boost::asio::post(bindExecutor(std::forward<Callable>(c)));
-        }
+    template <bool SelfLock = false, class Callable>
+    void post(Callable&& c) const {
+        boost::asio::post(executor(), wrap<SelfLock>(std::forward<Callable>(c)));
     }
 
-    template <bool Lock = false, class Callable>
-    void dispatch(Callable&& c) {
-        if constexpr (Lock) {
-            boost::asio::dispatch(bindExecutor(wrapLocked(std::forward<Callable>(c))));
-        } else {
-            boost::asio::dispatch(bindExecutor(std::forward<Callable>(c)));
-        }
+    template <bool SelfLock = false, class Callable>
+    void dispatch(Callable&& c) const {
+        boost::asio::dispatch(executor(), wrap<SelfLock>(std::forward<Callable>(c)));
     }
 
     bool running_in_strand_thread() const;
 
-private:
-    boost::asio::io_context::strand& strand() const;
+    TStrandExecutor& executor() const;
 
-    template<class Callable>
-    auto wrapLocked(Callable&& c) {
-        auto self = shared_from_this();
-        auto wrapper = [self, c = std::move(c)] {
-            c();
-        };
-        return std::move(wrapper);
+private:
+    template<bool SelfLock = false, class Callable>
+    auto wrap(Callable&& c) const {
+        if constexpr (SelfLock) {
+            auto self = shared_from_this();
+            auto wrapper = [self, c = std::move(c)]() -> auto {
+                return c();
+            };
+            return std::move(wrapper);
+        } else {
+            return std::forward<Callable>(c);
+        }
     }
 
-    boost::asio::io_context& m_io;
-    std::shared_ptr<boost::asio::io_context::strand> m_strand;
+    std::unique_ptr<TStrandExecutor> m_executor;
     StrandHolder *m_other;
 };
 

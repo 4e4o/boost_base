@@ -1,16 +1,9 @@
 #include "AApplication.h"
+#include "Logger/SimpleLogger.hpp"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <signal.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <syslog.h>
-#include <stdarg.h>
 
-//#define LOG_TO_SYSLOG   1
-#define LOG_TO_CONSOLE  1
+using namespace boost::program_options;
 
 AApplication* AApplication::m_app = nullptr;
 
@@ -40,7 +33,8 @@ static void setSignalHandler(int sig, __sighandler_t h) {
 }
 
 AApplication::AApplication(const std::string& name, int argc, char** argv)
-    : m_progName(name), m_argc(argc), m_argv(argv) {
+    : m_argc(argc), m_argv(argv),
+      m_progName(name), m_logger(new SimpleLogger()) {
     m_app = this;
 }
 
@@ -57,35 +51,23 @@ void AApplication::quit() {
     AApPrivateAccessor::callOnExit();
 }
 
-po::variables_map AApplication::parseCmdLine(po::options_description& desc) {
+void AApplication::onExitRequest() {
+}
+
+variables_map AApplication::parseCmdLine(options_description& desc) {
     try {
-        po::variables_map vm;
-        po::parsed_options parsed = po::command_line_parser(m_argc, m_argv).options(desc).run();
-        po::store(parsed, vm);
-        po::notify(vm);
+        variables_map vm;
+        parsed_options parsed = command_line_parser(m_argc, m_argv).options(desc).run();
+        store(parsed, vm);
+        notify(vm);
         return vm;
     } catch(std::exception& ex) {
-        log("Error parsing command line arguments");
+        AAP_LOG("Error parsing command line arguments");
     }
 
-    return po::variables_map();
+    return variables_map();
 }
 
-void AApplication::consoleLog(const std::string &msg) {
-    printf("%s\n", msg.c_str());
-    fflush(stdout);
-}
-
-void AApplication::log(const boost::format& fmt) {
-    log(fmt.str());
-}
-
-void AApplication::log(const std::string &msg) {
-#ifdef LOG_TO_CONSOLE
-    consoleLog(msg);
-#endif // LOG_TO_CONSOLE
-
-#ifdef LOG_TO_SYSLOG
-    syslog(LOG_NOTICE, "%s", msg.c_str());
-#endif // LOG_TO_SYSLOG
+ILogger* AApplication::logger() const {
+    return m_logger.get();
 }

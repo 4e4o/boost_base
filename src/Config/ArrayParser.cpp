@@ -32,7 +32,7 @@ bool ArrayParser::parseArray(const boost::json::array& input, TItems& result) {
             result.emplace_back(i.release());
         }
     } catch (std::exception const& e) {
-        AAP->log(boost::format("Config array parse error: %1%") % e.what());
+        AAP_LOG(fmt("Config array parse error: %1%") % e.what());
         return false;
     }
 

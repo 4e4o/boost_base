@@ -2,24 +2,26 @@
 #define PROXY_DATA_SESSION_H
 
 #include "Network/Session/Session.hpp"
+#include "ProxyDataSessionForward.hpp"
 
 // просто прокси сессия, которая передаёт данные другой прокси сессии и получает из неё же.
 
 class ProxyDataSession : public Session {
 public:
-    typedef std::shared_ptr<ProxyDataSession> TSessionPtr;
-
-    static TSessionPtr proxy(std::shared_ptr<Session>, std::shared_ptr<Session>);
-
+    ProxyDataSession(Socket*);
     ~ProxyDataSession();
 
+    void setOther(TProxyDataSession);
+
+protected:
+    TAwaitVoid work() override;
+
 private:
-    ProxyDataSession(Session*);
+    void otherDone();
 
-    virtual void startImpl() override final;
-    void setOther(const TSessionPtr&);
-
-    TSessionPtr m_other;
+    TWProxyDataSession m_other;
+    bool m_activityDetect;
+    bool m_activity;
 };
 
 #endif // PROXY_DATA_SESSION_H

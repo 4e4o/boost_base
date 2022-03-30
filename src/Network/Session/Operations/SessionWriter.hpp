@@ -1,34 +1,32 @@
 #ifndef SESSION_WRITER_HPP
 #define SESSION_WRITER_HPP
 
-#include "SessionOpManager.hpp"
-#include "SessionWriteOperation.hpp"
+#include "SessionOpBase.hpp"
+#include "Coroutine/Awaitables.hpp"
 
-#define BYTE(x) static_cast<uint8_t>(x)
+// Адаптер для чтения из сессии
 
-// Адаптер для записи в сессию
+class Session;
 
-class SessionWriter : public SessionOpManager<SessionWriteOperation> {
+// TODO remove it when bug will be fixed:
+// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=103871
+#define CO_SES_WRITE(s, ...) { \
+    std::vector<uint8_t> buf({__VA_ARGS__}); \
+    co_await (s)->writer().all(std::move(buf)); \
+}
+
+class SessionWriter : public SessionOpBase {
 public:
-    using SessionOpManager<SessionWriteOperation>::SessionOpManager;
+    using SessionOpBase::SessionOpBase;
 
-    template<class CompletionFunc>
-    void operator()(CompletionFunc&& e, std::initializer_list<uint8_t> l) {
-        std::vector<uint8_t> data(l);
-        operator()<true>(std::forward<CompletionFunc>(e), data.data(), data.size());
+    //     TAwaitVoid all(std::initializer_list<uint8_t> l)
+    template<class Container = TBuffer>
+    TAwaitVoid all(Container&& c) {
+        buffer() = std::move(c);
+        co_await all(ptr(), buffer().size());
     }
 
-    template<bool Copy = false, class CompletionFunc>
-    void operator()(CompletionFunc&& e, const uint8_t *ptr, std::size_t size) {
-        TOp *op = createOp(ptr, size, Copy);
-        op->completed.connect([e = std::move(e), op, ptr](bool success) {
-            if (success) {
-                e();
-            }
-        });
-
-        doOp(op);
-    }
+    TAwaitVoid all(const uint8_t*, size_t size);
 };
 
 #endif // SESSION_WRITER_HPP

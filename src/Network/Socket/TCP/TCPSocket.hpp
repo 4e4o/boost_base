@@ -7,32 +7,33 @@
 
 class TCPSocket : public Socket {
 public:
-    TCPSocket(boost::asio::io_context& io);
-    TCPSocket(boost::asio::io_context& io, boost::asio::ip::tcp::socket&& socket);
+    typedef boost::asio::ip::tcp::socket TSocket;
+
+    TCPSocket(boost::asio::io_context&, boost::asio::ip::tcp::socket&&);
     ~TCPSocket();
 
     void setNagle(bool);
     void setKeepAlive(bool);
 
-    Socket* create(boost::asio::io_context &io) override;
+    Socket* create(boost::asio::io_context&) override;
+
+    static void forceClose(TSocket&);
 
 protected:
-    void asyncStartImpl(const TErrorCallback&) override;
-    void async_close(const TErrorCallback&) override;
+    TAwaitVoid co_start() override;
+    TAwaitVoid co_close() override;
 
-    void async_read_some(uint8_t*, const std::size_t&, const TDataCallback&) override;
-    void async_read_all(uint8_t*, const std::size_t&, const TDataCallback&) override;
+    TAwaitSize co_readSome(uint8_t*, const std::size_t&) override;
+    TAwaitVoid co_readAll(uint8_t*, const std::size_t&) override;
 
-    void async_write_all(const uint8_t*, const std::size_t&, const TDataCallback&) override;
+    TAwaitVoid co_writeAll(const uint8_t*, const std::size_t&) override;
 
     void cancel() override;
 
     void setTCPSocket(boost::asio::ip::tcp::socket*);
 
 private:
-    typedef boost::asio::ip::tcp::socket TSocket;
-
-    void force_close(const TErrorCallback&);
+    TCPSocket(boost::asio::io_context&);
 
     std::unique_ptr<TSocket> m_socket;
     bool m_socketOwner;

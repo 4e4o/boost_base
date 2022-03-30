@@ -2,26 +2,36 @@
 #include "Config/Config.hpp"
 
 #include <ThreadPool.hpp>
+#include <Logger/AsyncLogger.hpp>
 #include <Misc/Debug.hpp>
 
-BaseConfigApplication::BaseConfigApplication(const std::string& n,
+using namespace boost::asio;
+using namespace boost::program_options;
+
+BaseConfigApplication::BaseConfigApplication(const std::string& name,
                                              int argc, char** argv)
-    : AApplication(n, argc, argv),
+    : AApplication(name, argc, argv),
+      m_threadPool(new ThreadPool()),
+      m_logger(new AsyncLogger(io())),
       m_config(new Config()) {
-    debug_print(boost::format("BaseConfigApplication::BaseConfigApplication %1%") % this);
+    debug_print_this("");
 }
 
 BaseConfigApplication::~BaseConfigApplication() {
-    debug_print(boost::format("BaseConfigApplication::~BaseConfigApplication %1%") % this);
+    debug_print_this("");
+}
+
+ILogger* BaseConfigApplication::logger() const {
+    return m_logger.get();
 }
 
 bool BaseConfigApplication::processArgs() {
-    po::options_description desc("Options");
-    desc.add_options()("c", po::value<std::string>(), "Config path");
-    po::variables_map vm = parseCmdLine(desc);
+    options_description desc("Options");
+    desc.add_options()("c", value<std::string>(), "Config path");
+    variables_map vm = parseCmdLine(desc);
 
     if (!vm.count("c")) {
-        log("Must set config with --c <config_path>");
+        AAP_LOG("Must set config with --c <config_path>");
         return false;
     }
 
@@ -34,8 +44,6 @@ Config* BaseConfigApplication::config() {
 }
 
 int BaseConfigApplication::exec() {
-    m_threadPool.reset(createThreadPool());
-
     if (!processArgs())
         return 1;
 
@@ -50,17 +58,14 @@ int BaseConfigApplication::exec() {
         if (!start(items))
             return 1;
 
+        m_logger->start();
         m_threadPool->run();
         m_threadPool->stop(true);
     } catch (std::exception& e) {
-        log(boost::format("BaseConfigApplication::run exception %1%") % e.what());
+        AAP_LOG(fmt("%1% exception %2%") % METHOD_NAME % e.what());
     }
 
     return 0;
-}
-
-ThreadPool* BaseConfigApplication::createThreadPool() {
-    return new ThreadPool();
 }
 
 boost::asio::io_context &BaseConfigApplication::io() const {
@@ -70,8 +75,9 @@ boost::asio::io_context &BaseConfigApplication::io() const {
 void BaseConfigApplication::onExitRequest() {
     // ensure that exit logic will run after m_threadPool is started
     post([this] {
-        debug_print("BaseConfigApplication::onExitRequest");
+        debug_print_this("");
         doExit();
+        m_logger->stop();
         m_threadPool->stop(false);
     });
 }

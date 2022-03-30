@@ -1,46 +1,35 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-#include "Misc/TimeDuration.hpp"
-#include "Misc/StrandHolder.hpp"
+#include "ClientForward.hpp"
 #include "Misc/GenericFactory.hpp"
-#include "Misc/TimerForward.hpp"
+#include "Coroutine/CoroutineTask.hpp"
 #include "Network/Session/SessionForward.hpp"
 
-#include <boost/signals2/signal.hpp>
-
-class Client : public StrandHolder, public GenericFactory<StrandHolder> {
+class Client : public CoroutineTask<TSession, const std::string&, unsigned short>,
+        public GenericFactory<BaseFactoryObject> {
 public:
-    Client(boost::asio::io_context &io, const TTimeDuration& = boost::none);
-    virtual ~Client();
-
-    void start(const std::string& ip, unsigned short port, const TTimeDuration& = boost::none);
-    void stop();
-
-    bool connected() const;
+    Client(boost::asio::io_context&, const TDurationUnit&);
+    Client(boost::asio::io_context&, const TTimeDuration& = boost::none);
+    ~Client();
 
     void enableSSL();
+    bool connected() const;
+    void setConnectTimeout(const TTimeDuration &);
 
-    boost::signals2::signal<void(TWSession)> newSession;
+    typedef std::function<void(TWSession)> TNewSessionHandler;
+
+    void setHandler(const TNewSessionHandler &handler);
+
+protected:
+    TAwaitResult run(const std::string& ip, unsigned short port) override;
 
 private:
-    void run();
-    void restart();
-    void onSession(TSession);
-
-    enum class State {
-        INITIAL,
-        STARTED,
-        STOPPED
-    };
-
-    State m_state;
-    std::string m_ip;
-    unsigned short m_port;
-    TTimer m_connectTimer;
-    TTimer m_restartTimer;
     TWSession m_session;
-    boost::signals2::signal<void()> m_close;
+    const bool m_managedMode;
+    TTimeDuration m_connect;
+    const TTimeDuration m_reconnect;
+    TNewSessionHandler m_handler;
 };
 
 #endif // CLIENT_H

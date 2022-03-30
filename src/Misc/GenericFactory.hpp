@@ -11,6 +11,7 @@
 
 #include "ClassName.hpp"
 #include "LambdaTraits.hpp"
+#include "BaseFactoryObject.hpp"
 
 /**
  * Обобщённый фактори.

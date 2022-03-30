@@ -10,6 +10,7 @@
 class Config;
 class ConfigItem;
 class ThreadPool;
+class AsyncLogger;
 
 class BaseConfigApplication : public AApplication {
 public:
@@ -18,6 +19,8 @@ public:
     ~BaseConfigApplication();
 
     int exec() override final;
+
+    ILogger* logger() const override;
 
     Config* config();
 
@@ -31,7 +34,6 @@ protected:
 
     virtual bool start(TConfigItems&) = 0;
     virtual void doExit() {}
-    virtual ThreadPool* createThreadPool();
 
     boost::asio::io_context &io() const;
 
@@ -39,9 +41,10 @@ private:
     void onExitRequest() override final;
     bool processArgs();
 
+    std::shared_ptr<ThreadPool> m_threadPool;
+    std::shared_ptr<AsyncLogger> m_logger;
     std::string m_configPath;
     std::unique_ptr<Config> m_config;
-    std::shared_ptr<ThreadPool> m_threadPool;
 };
 
 #endif // BASE_CONFIG_APPLICATION_H
