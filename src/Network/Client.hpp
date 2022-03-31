@@ -7,7 +7,7 @@
 #include "Network/Session/SessionForward.hpp"
 
 class Client : public CoroutineTask<TSession, const std::string&, unsigned short>,
-        public GenericFactory<BaseFactoryObject> {
+        public GenericFactory<> {
 public:
     Client(boost::asio::io_context&, const TDurationUnit&);
     Client(boost::asio::io_context&, const TTimeDuration& = boost::none);

@@ -2,15 +2,12 @@
 #define GENERIC_FACTORY_HPP
 
 #include <map>
-#include <string>
+#include <any>
 #include <functional>
 #include <stdexcept>
-#include <type_traits>
-#include <concepts>
-#include <any>
 
 #include "ClassName.hpp"
-#include "LambdaTraits.hpp"
+#include "CallableTraits.hpp"
 #include "BaseFactoryObject.hpp"
 
 /**
@@ -19,7 +16,7 @@
  * Позволяет регистрировать типы, производные от Base для последующего создания.
  */
 
-template<class Base>
+template<class Base = BaseFactoryObject>
 class GenericFactory {
   public:
     /**
@@ -51,17 +48,17 @@ class GenericFactory {
 
     /**
      *  Регистрация Производного от Base типа
-     *  сюда передаём лямбду
-     *  лямбда является конструктором, которая должа возвратить новый инстанс типа
+     *  сюда передаём лямбду, простой функтор или указатель на функцию
+     *  Callable c является конструктором, который должа возвратить новый инстанс типа
      */
 
-    template<LambdaPtrResultDerived<Base> Callable>
+    template<CallablePointerResultDerived<Base> Callable>
     void registerType(Callable &&c) {
         typedef typename
-        MakeCreator<typename LambdaTraits<Callable>::args_tuple>::TCreator TCreator;
+        MakeCreator<typename CallableTraits<Callable>::args_tuple>::TCreator TCreator;
         TCreator creator{std::move(c)};
         using RetType = typename
-                        std::remove_pointer<typename LambdaTraits<Callable>::result_type>::type;
+                        std::remove_pointer<typename CallableTraits<Callable>::result_type>::type;
 
         insert <RetType>(std::move(creator));
     }

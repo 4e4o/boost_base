@@ -7,7 +7,7 @@
 #include "Coroutine/CoroutineTask.hpp"
 
 class Server : public CoroutineTask<void, const std::string&, unsigned short>,
-        public GenericFactory<BaseFactoryObject> {
+        public GenericFactory<> {
 public:
     Server(boost::asio::io_context &io);
     ~Server();
