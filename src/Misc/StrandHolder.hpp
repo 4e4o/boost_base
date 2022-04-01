@@ -2,11 +2,9 @@
 #define STRAND_HOLDER_HPP
 
 #include "Misc/EnableSharedFromThisVirtual.hpp"
+#include "Misc/CallableTraits.hpp"
 #include "IOContextHolder.hpp"
 #include "StrandExecutor.hpp"
-
-#include <boost/asio/co_spawn.hpp>
-#include <boost/asio/detached.hpp>
 
 #define STRAND_ASSERT(s) assert((s)->running_in_strand_thread())
 
@@ -17,34 +15,48 @@ public:
 
     void setStrand(StrandHolder*);
 
-    template <bool SelfLock = false, typename CompletionToken = decltype(boost::asio::detached), class Callable>
-    auto spawn(Callable&& c, CompletionToken ct = boost::asio::detached) const {
-        return boost::asio::co_spawn(executor(), wrap<SelfLock>(std::forward<Callable>(c)), ct);
-    }
-
     template <bool SelfLock = false, class Callable>
     void post(Callable&& c) const {
-        boost::asio::post(executor(), wrap<SelfLock>(std::forward<Callable>(c)));
+        boost::asio::post(executor(), autoLockHandler<SelfLock>(std::forward<Callable>(c)));
     }
 
     template <bool SelfLock = false, class Callable>
     void dispatch(Callable&& c) const {
-        boost::asio::dispatch(executor(), wrap<SelfLock>(std::forward<Callable>(c)));
+        boost::asio::dispatch(executor(), autoLockHandler<SelfLock>(std::forward<Callable>(c)));
     }
 
     bool running_in_strand_thread() const;
 
     TStrandExecutor& executor() const;
 
-private:
+protected:
     template<bool SelfLock = false, class Callable>
-    auto wrap(Callable&& c) const {
-        if constexpr (SelfLock) {
-            auto self = shared_from_this();
-            auto wrapper = [self, c = std::move(c)]() -> auto {
-                return c();
+    auto autoLockHandler(Callable&& c) const {
+        return autoLockHandlerImpl<SelfLock>(std::forward<Callable>(c));
+    }
+
+private:
+    template <typename T>
+    struct expandAutoLockTuple;
+
+    template <typename... Args>
+    struct expandAutoLockTuple<std::tuple<Args...>> {
+        template<class Callable, typename T>
+        static auto createWrapper(Callable &&c, T& self) {
+            typedef typename CallableTraits<Callable>::result_type TResult;
+            auto wrapper = [self, c = std::move(c)](Args&&... args) -> TResult {
+                return c(std::forward<Args>(args)...);
             };
             return std::move(wrapper);
+        }
+    };
+
+    template<bool SelfLock = false, class Callable>
+    auto autoLockHandlerImpl(Callable&& c) const {
+        if constexpr (SelfLock) {
+            typedef typename CallableTraits<Callable>::args_tuple TArgsTuple;
+            auto self = shared_from_this();
+            return expandAutoLockTuple<TArgsTuple>::createWrapper(std::forward<Callable>(c), self);
         } else {
             return std::forward<Callable>(c);
         }

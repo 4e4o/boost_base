@@ -8,7 +8,7 @@ using namespace boost::asio;
 using namespace boost::system;
 
 AsyncProxyProvider::AsyncProxyProvider(boost::asio::io_context& io, AsyncProxyProviderDelegate* d)
-    : StrandHolder(io), m_delegate(d) {
+    : CoroutineSpawn(io), m_delegate(d) {
 }
 
 AsyncProxyProvider::~AsyncProxyProvider() {
@@ -38,6 +38,7 @@ void AsyncProxyProvider::asyncResponse(TSession second) {
 
 TAwaitSession AsyncProxyProvider::get(ISessionRequester* r) {
     return spawn<true>([this, r]() -> TAwaitSession {
+        STRAND_ASSERT(this);
         IProxySessionRequester* requster = static_cast<IProxySessionRequester*>(r);
         TSession first = requster->getInitiationSession();
         TSessionClass rClass = m_delegate->classify(first);
@@ -56,10 +57,13 @@ TAwaitSession AsyncProxyProvider::get(ISessionRequester* r) {
         debug_print_this(fmt("%1% %2%") % rClass % requests.size());
 
         if (!co_await m_delegate->startAsyncRequest(rClass)) {
+            STRAND_ASSERT(this);
             throw errc::make_error_code(errc::host_unreachable);
         }
 
+        STRAND_ASSERT(this);
         co_await request->event->co_wait();
+        STRAND_ASSERT(this);
         TSession result = request->second;
 
         if (result.get() == nullptr) {

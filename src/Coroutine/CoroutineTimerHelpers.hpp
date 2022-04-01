@@ -4,17 +4,17 @@
 #include "Awaitables.hpp"
 #include "Concepts.hpp"
 #include "Timed/Timed.hpp"
-#include "Misc/StrandHolder.hpp"
+#include "Spawn.hpp"
 
 #include <boost/asio/use_awaitable.hpp>
 
 class CoroutineTimerHelpers {
 protected:
-    CoroutineTimerHelpers(StrandHolder* s)
-        : m_strand(s) { }
+    CoroutineTimerHelpers(CoroutineSpawn* s)
+        : m_spawn(s) { }
 
     void initTimer() {
-        m_timer.reset(new boost::asio::steady_timer(m_strand->executor()));
+        m_timer.reset(new boost::asio::steady_timer(m_spawn->executor()));
     }
 
     static constexpr auto deferred = boost::asio::experimental::deferred;
@@ -46,7 +46,7 @@ protected:
         using namespace boost::asio;
 
         if (timeout.has_value()) {
-            auto deferredOp = m_strand->spawn([op = std::move(op)]() mutable -> Op {
+            auto deferredOp = m_spawn->spawn([op = std::move(op)]() mutable -> Op {
                 // FIXME return
                 //co_return co_await std::move(op);
 
@@ -73,7 +73,7 @@ protected:
     }
 
 private:
-    StrandHolder *m_strand;
+    CoroutineSpawn *m_spawn;
     std::unique_ptr<boost::asio::steady_timer> m_timer;
 };
 

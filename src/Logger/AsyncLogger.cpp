@@ -3,13 +3,18 @@
 
 using namespace std::literals::chrono_literals;
 
-#define FLUSH_INTERVAL 2s
+#define FLUSH_INTERVAL 1s
 
 AsyncLogger::AsyncLogger(boost::asio::io_context& io)
     : SimpleLogger(false), CoroutineTask(io) {
 }
 
 AsyncLogger::~AsyncLogger() {
+    flush();
+}
+
+TAwaitVoid AsyncLogger::onStop() {
+    co_await CoroutineTask::onStop();
     flush();
 }
 

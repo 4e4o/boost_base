@@ -75,9 +75,11 @@ boost::asio::io_context &BaseConfigApplication::io() const {
 void BaseConfigApplication::onExitRequest() {
     // ensure that exit logic will run after m_threadPool is started
     post([this] {
-        debug_print_this("");
+        debug_print_this("start");
         doExit();
         m_logger->stop();
+        debug_print_this("before thread pool stop");
         m_threadPool->stop(false);
+        debug_print_this("end");
     });
 }

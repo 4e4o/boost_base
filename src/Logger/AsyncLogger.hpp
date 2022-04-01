@@ -15,6 +15,7 @@ public:
 
 private:
     TAwaitResult run() override;
+    TAwaitVoid onStop() override;
     void flush();
 
     typedef std::queue<std::string> TLogs;

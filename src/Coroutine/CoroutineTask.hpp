@@ -1,24 +1,23 @@
 #ifndef COROUTINE_TASK_HPP
 #define COROUTINE_TASK_HPP
 
+#include "Spawn.hpp"
+#include "Awaitables.hpp"
+#include "CoroutineTimerHelpers.hpp"
+
 #include "Misc/TimeDuration.hpp"
-#include "Misc/StrandHolder.hpp"
 #include "Misc/Lifecycle.hpp"
 #include "Misc/ScopeGuard.hpp"
-#include "Coroutine/Awaitables.hpp"
-#include "Coroutine/CoroutineTimerHelpers.hpp"
 
 #include <boost/signals2/signal.hpp>
 
-#include <boost/asio/bind_cancellation_slot.hpp>
-
 template<typename TResult, typename... Args>
-class CoroutineTask : public StrandHolder, public CoroutineTimerHelpers {
+class CoroutineTask : public CoroutineSpawn, public CoroutineTimerHelpers {
 public:
     typedef boost::asio::awaitable<TResult> TAwaitResult;
 
     CoroutineTask(boost::asio::io_context &io)
-        : StrandHolder(io), CoroutineTimerHelpers(this), m_state(State::INITIAL) { }
+        : CoroutineSpawn(io), CoroutineTimerHelpers(this), m_state(State::INITIAL) { }
     ~CoroutineTask() { }
 
     void start(Args&&... args) {
@@ -27,8 +26,8 @@ public:
 
     template<typename CompletionToken = decltype(boost::asio::detached)>
     auto co_start(CompletionToken ct = boost::asio::detached, Args... args) {
-        return spawn<true>([this, args...]() -> TAwaitResult {
-            co_return co_await work(args...);
+        return spawn<true>([this, args...](TSpawnCancellation cancel) -> TAwaitResult {
+            co_return co_await work(cancel, args...);
         }, ct);
     }
 
@@ -44,7 +43,11 @@ public:
 
             m_state = State::STOPPED;
             co_await onStop();
-            emitCancellation();
+
+            if (m_cancellation) {
+                m_cancellation();
+            }
+
             m_stopped();
             co_return;
         }, ct);
@@ -71,7 +74,7 @@ protected:
     }
 
 private:
-    TAwaitResult work(Args... args) {
+    TAwaitResult work(TSpawnCancellation cancel, Args... args) {
         initTimer();
 
         using namespace boost::asio;
@@ -81,29 +84,8 @@ private:
             throwGenericCoroutineError();
         }
 
-        // для co_spawn которые были вызваны с bind_cancellation_slot сигналы отмены не распространяются
-        // автоматически во вложенные co_spawn, нужно руками связывать перед co_await
-        cancellation_state cs = co_await this_coro::cancellation_state;
-        cancellation_slot slot = cs.slot();
-
-        // ставим слот если только родительский(текущий co_spawn) имеет слот отмены
-        // не иметь слот отмены он может если например запущен как detached
-        if (slot.is_connected()) {
-            slot.assign([this](auto) {
-                emitCancellation();
-            });
-        }
-
-        // еще раз спавним поток корутины чтоб на этот раз наверняка поиметь m_cancellation функционал
-        co_return co_await spawn([this, &args...]() -> TAwaitResult {
-            co_return co_await work0(args...);
-        }, bind_cancellation_slot(m_cancellation.slot(), use_awaitable));
-    }
-
-    void emitCancellation() {
-        dispatch<true>([this] {
-            m_cancellation.emit(boost::asio::cancellation_type::all);
-        });
+        m_cancellation = cancel;
+        co_return co_await work0(args...);
     }
 
     TAwaitResult work0(Args... args) {
@@ -125,8 +107,8 @@ private:
     };
 
     State m_state;
+    TSpawnCancellation m_cancellation;
     boost::signals2::signal<void()> m_stopped;
-    boost::asio::cancellation_signal m_cancellation;
 };
 
 #endif /* COROUTINE_TASK_HPP */

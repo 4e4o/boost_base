@@ -5,13 +5,13 @@
 #include "Network/Session/ISessionProvider.hpp"
 #include "Misc/IntrusiveListHelpers.hpp"
 #include "Coroutine/Awaitables.hpp"
-#include "Misc/StrandHolder.hpp"
+#include "Coroutine/Spawn.hpp"
 
 #include <unordered_map>
 
 class AwaitableEvent;
 
-class AsyncProxyProvider : public StrandHolder, public ISessionProvider {
+class AsyncProxyProvider : public CoroutineSpawn, public ISessionProvider {
 public:
     using TSessionClass = AsyncProxyProviderDelegate::TSessionClass;
 
