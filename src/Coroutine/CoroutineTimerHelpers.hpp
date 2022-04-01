@@ -47,18 +47,7 @@ protected:
 
         if (timeout.has_value()) {
             auto deferredOp = m_spawn->spawn([op = std::move(op)]() mutable -> Op {
-                // FIXME return
-                //co_return co_await std::move(op);
-
-                if constexpr (std::is_same_v<Op, TAwaitVoid>) {
-                    co_await std::move(op);
-                    co_return;
-
-                } else {
-                    auto res = co_await std::move(op);
-                    co_return res;
-                }
-
+                co_return co_await std::move(op);
             }, deferred);
 
             return with_timeout(std::move(deferredOp), m_timer.get(), *timeout, use_awaitable);

@@ -46,25 +46,15 @@ struct timed_initiation {
 
         associated_cancellation_slot_t<CompletionHandler> slot = get_associated_cancellation_slot(handler);
 
-//        auto alloc = get_associated_allocator(handler);
-
-//               std::shared_ptr<steady_timer> timer2 =
-  //                 std::allocate_shared<steady_timer>(alloc, ex, timeout);
-
         auto timerEx = timer->get_executor();
 
         assert(timerEx == ex);
 
-        slot.assign([timer/*, timer2*/](auto) {
+        slot.assign([timer](auto) {
             timer->cancel();
-//            timer2->cancel();
         });
 
-        auto timerOp = bind_executor(ex, [timer, /*timer2,*/ timeout](auto&& token) {
-//            timer2->expires_after(timeout);
-//            return timer2->async_wait(std::forward<decltype(token)>(token));
-
-//            timer->cancel();
+        auto timerOp = bind_executor(ex, [timer, timeout](auto&& token) {
             timer->expires_after(timeout);
             return timer->async_wait(std::forward<decltype(token)>(token));
         });
