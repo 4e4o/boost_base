@@ -6,7 +6,7 @@
 #include <functional>
 #include <stdexcept>
 
-#include "ClassName.hpp"
+#include "TypeName.hpp"
 #include "CallableTraits.hpp"
 #include "BaseFactoryObject.hpp"
 
@@ -75,7 +75,7 @@ class GenericFactory {
     template<class T, typename... CreatorArgs>
     requires std::derived_from<T, Base>
     T *create(CreatorArgs&&... args) {
-        constexpr auto className = getFullTypeName<T>();
+        const std::string className(getTypeName<T>());
 
         if (m_types.find(className) == m_types.end())
             throw std::runtime_error("Type does not registered");
@@ -99,7 +99,7 @@ class GenericFactory {
 
     template<class KeyType, class Creator>
     void insert(Creator &&creator) {
-        constexpr auto className = getFullTypeName<KeyType>();
+        const std::string className(getTypeName<KeyType>());
         m_types.erase(className);
         m_types.emplace(className, std::move(creator));
     }

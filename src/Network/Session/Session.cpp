@@ -15,6 +15,7 @@ INIT_DEBUG_OBJECTS_COUNT(sessions)
 
 Session::Session(Socket *s)
     : CoroutineTask(s->io()),
+      m_autoClose(true),
       m_reader(new SessionReader(this)),
       m_writer(new SessionWriter(this)) {
     DEBUG_OBJECTS_COUNT_INC(sessions);
@@ -32,6 +33,10 @@ Socket* Session::releaseSocket() {
     Socket *sock = m_socket.release();
     setSocket(sock->create(io()));
     return sock;
+}
+
+void Session::setAutoClose(bool autoClose) {
+    m_autoClose = autoClose;
 }
 
 void Session::setSocket(Socket* s) {
@@ -54,28 +59,37 @@ TAwaitVoid Session::work() {
     co_return;
 }
 
+TAwaitVoid Session::onStop() {
+    co_return ;
+}
+
 TAwaitVoid Session::run() {
     debug_print_this("start");
 
-    // FIXME scoped auto close ?
+    ScopeGuard autoClose([this]() {
+        if (m_autoClose) {
+            close();
+        }
+    });
 
     try {
         co_await prepare();
-
-        if (!socket()->started()) {
-            co_await timeout(socket()->co_start(), getTimeout(Timeout::START));
-        }
-
+        co_await timeout(socket()->co_start(), getTimeout(Timeout::START));
         co_await work();
-    } catch(const std::exception& ex1) {
-        debug_print_this(fmt("exception %1%") % ex1.what());
-        throw ex1;
+    } catch(const std::exception& e) {
+        debug_print_this(fmt("exception %1%") % e.what());
+        throw;
     }
 
     co_return;
 }
 
-TAwaitVoid Session::onStop() {
-    // FIXME !
-    co_return ;//co_await socket()->co_close();
+void Session::close() {
+    spawn<true>([this]() -> TAwaitVoid {
+        try {
+            co_await timeout(socket()->co_close(), getTimeout(Timeout::CLOSE));
+        } catch (const std::exception& e) {
+            debug_print_this(fmt("socket close exception %1%") % e.what());
+        } catch(...) { }
+    });
 }

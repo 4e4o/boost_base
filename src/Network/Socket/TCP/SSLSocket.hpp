@@ -21,13 +21,13 @@ private:
     SSLSocket(boost::asio::io_context&);
     Socket* create(boost::asio::io_context&) override;
 
-    TAwaitVoid co_start() override;
-    TAwaitVoid co_close() override;
+    TAwaitVoid start() override;
+    TAwaitVoid close() override;
 
     TAwaitSize co_readSome(uint8_t*, const std::size_t&) override;
-    TAwaitVoid co_readAll(uint8_t*, const std::size_t&) override;
+    TAwaitSize co_readAll(uint8_t*, const std::size_t&) override;
 
-    TAwaitVoid co_writeAll(const uint8_t*, const std::size_t&) override;
+    TAwaitSize co_writeAll(const uint8_t*, const std::size_t&) override;
 
     typedef boost::asio::ssl::stream<boost::asio::ip::tcp::socket> TSocket;
     typedef boost::asio::ssl::context TContext;

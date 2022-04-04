@@ -65,21 +65,17 @@ Client::TAwaitResult Client::run(const std::string& ip, unsigned short port) {
 
             // в случае отмены операции должны выкинуть исключение чтоб отмена клиента работала всегда
             if (e.code() == errc::operation_canceled) {
-                throw system_error(e);
+                throw;
             } else {
                 // для других исключений смотрим режим клиента
 
                 // в managedMode все ошибки допустимые, просто продолжаем попытки коннектов
                 // в противном случае выкидываем полученное исключение
                 if (!m_managedMode) {
-                    throw system_error(e);
+                    throw;
                 }
             }
-        }/* catch(const std::exception& e) {
-            int aa=1;
-            aa=2;
-
-        } */catch(...) {
+        } catch(...) {
             if (!m_managedMode) {
                 throw;
             }

@@ -14,8 +14,8 @@ AsyncLogger::~AsyncLogger() {
 }
 
 TAwaitVoid AsyncLogger::onStop() {
-    co_await CoroutineTask::onStop();
     flush();
+    co_return;
 }
 
 void AsyncLogger::log(const std::string& msg) {

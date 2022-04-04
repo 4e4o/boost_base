@@ -15,13 +15,19 @@ public:
 
 protected:
     TAwaitVoid work() override;
+    TAwaitVoid onStop() override;
 
 private:
-    void otherDone();
+    enum class State {
+        READ,
+        WRITE
+    };
+
+    void otherDone(State);
 
     TWProxyDataSession m_other;
-    bool m_activityDetect;
-    bool m_activity;
+    State m_state;
+    bool m_otherDone;
 };
 
 #endif // PROXY_DATA_SESSION_H

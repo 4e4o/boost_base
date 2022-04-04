@@ -21,12 +21,12 @@ public:
 
     //     TAwaitVoid all(std::initializer_list<uint8_t> l)
     template<class Container = TBuffer>
-    TAwaitVoid all(Container&& c) {
+    TAwaitSize all(Container&& c) {
         buffer() = std::move(c);
-        co_await all(ptr(), buffer().size());
+        return all(ptr(), buffer().size());
     }
 
-    TAwaitVoid all(const uint8_t*, size_t size);
+    TAwaitSize all(const uint8_t*, size_t size);
 };
 
 #endif // SESSION_WRITER_HPP

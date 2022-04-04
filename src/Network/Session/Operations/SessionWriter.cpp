@@ -11,6 +11,6 @@
     co_await all(ptr(), buffer().size());
 }*/
 
-TAwaitVoid SessionWriter::all(const uint8_t* ptr, size_t size) {
-    co_return co_await session()->socket()->co_writeAll(ptr, size);
+TAwaitSize SessionWriter::all(const uint8_t* ptr, size_t size) {
+    return session()->socket()->co_writeAll(ptr, size);
 }

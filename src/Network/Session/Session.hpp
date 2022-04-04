@@ -35,17 +35,24 @@ public:
         return result;
     }
 
+    // авто закрытие сокета
+    void setAutoClose(bool autoClose);
+
 protected:
     virtual TAwaitVoid prepare();
     virtual TAwaitVoid work();
+    TAwaitVoid onStop() override;
+
+    // закрыть сокет
+    void close();
 
 private:
     TAwaitVoid run() override final;
-    TAwaitVoid onStop() override final;
 
     void setSocket(Socket*);
     Socket* releaseSocket();
 
+    bool m_autoClose;
     std::unique_ptr<Socket> m_socket;
     std::unique_ptr<SessionReader> m_reader;
     std::unique_ptr<SessionWriter> m_writer;

@@ -17,18 +17,20 @@ public:
 
     Socket* create(boost::asio::io_context&) override;
 
-    static void forceClose(TSocket&);
+    // disable nagle and enable keep alive
+    // enabled by default
+    void setFastPreset(bool fastPreset);
 
 protected:
-    TAwaitVoid co_start() override;
-    TAwaitVoid co_close() override;
+    TAwaitVoid start() override;
+    TAwaitVoid close() override;
 
     TAwaitSize co_readSome(uint8_t*, const std::size_t&) override;
-    TAwaitVoid co_readAll(uint8_t*, const std::size_t&) override;
+    TAwaitSize co_readAll(uint8_t*, const std::size_t&) override;
 
-    TAwaitVoid co_writeAll(const uint8_t*, const std::size_t&) override;
+    TAwaitSize co_writeAll(const uint8_t*, const std::size_t&) override;
 
-    void cancel() override;
+    void cancel();
 
     void setTCPSocket(boost::asio::ip::tcp::socket*);
 
@@ -37,6 +39,7 @@ private:
 
     std::unique_ptr<TSocket> m_socket;
     bool m_socketOwner;
+    bool m_fastPreset;
 };
 
 #endif // TCP_SOCKET_H

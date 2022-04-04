@@ -76,40 +76,41 @@ Socket* SSLSocket::create(boost::asio::io_context& io) {
     return new SSLSocket(io);
 }
 
-TAwaitVoid SSLSocket::co_start() {
-    co_await TCPSocket::co_start();
+TAwaitVoid SSLSocket::start() {
+    co_await TCPSocket::start();
     const handshake_type type = m_client ? handshake_type::client : handshake_type::server;
     co_await m_socket->async_handshake(type, use_awaitable);
     co_return;
 }
 
-TAwaitVoid SSLSocket::co_close() {
+TAwaitVoid SSLSocket::close() {
     if (m_ssl) {
+        debug_print_this("async_shutdown start");
         cancel();
-        debug_print_this("start");
         co_await m_socket->async_shutdown(use_awaitable);
+        debug_print_this("async_shutdown end");
     }
 
-    co_await TCPSocket::co_close();
+    co_await TCPSocket::close();
 }
 
 TAwaitSize SSLSocket::co_readSome(uint8_t* ptr, const std::size_t& size) {
     if (m_ssl)
-        co_return co_await m_socket->async_read_some(buffer(ptr, size), use_awaitable);
-    else
-        co_return co_await TCPSocket::co_readSome(ptr, size);
+        return m_socket->async_read_some(buffer(ptr, size), use_awaitable);
+
+    return TCPSocket::co_readSome(ptr, size);
 }
 
-TAwaitVoid SSLSocket::co_readAll(uint8_t* ptr, const std::size_t& size) {
+TAwaitSize SSLSocket::co_readAll(uint8_t* ptr, const std::size_t& size) {
     if (m_ssl)
-        co_await async_read(*m_socket, buffer(ptr, size), use_awaitable);
-    else
-        co_await TCPSocket::co_readAll(ptr, size);
+        return async_read(*m_socket, buffer(ptr, size), use_awaitable);
+
+    return TCPSocket::co_readAll(ptr, size);
 }
 
-TAwaitVoid SSLSocket::co_writeAll(const uint8_t* ptr, const std::size_t& size) {
+TAwaitSize SSLSocket::co_writeAll(const uint8_t* ptr, const std::size_t& size) {
     if (m_ssl)
-        co_await async_write(*m_socket, boost::asio::buffer(ptr, size), use_awaitable);
-    else
-        co_await TCPSocket::co_writeAll(ptr, size);
+        return async_write(*m_socket, boost::asio::buffer(ptr, size), use_awaitable);
+
+    return TCPSocket::co_writeAll(ptr, size);
 }

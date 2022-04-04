@@ -5,8 +5,6 @@
 
 #include <string_view>
 
-#define METHOD_NAME             DebugUtils::methodName(__PRETTY_FUNCTION__)
-
 #ifdef NDEBUG
 
 #define debug_print(...)            { }
@@ -19,6 +17,8 @@
 
 #else   // NDEBUG
 
+#define METHOD_NAME             DebugUtils::methodName(__PRETTY_FUNCTION__)
+
 #define debug_print(...)        { AAP_LOG(__VA_ARGS__); }
 #define debug_print_func(...)   { debug_print(fmt("%1% %2%") % METHOD_NAME % (__VA_ARGS__)); }
 #define debug_print_this(...)   { debug_print_func(fmt("%1% %2%") % this % (__VA_ARGS__)); }
@@ -29,28 +29,69 @@
 #define DEBUG_OBJECTS_COUNT_INC(obj_name)  {                                    \
     DEBUG_OBJECTS_COUNTER_NAME(obj_name)++;                                     \
     debug_print_this(fmt("count %1%") % DEBUG_OBJECTS_COUNTER_NAME(obj_name));  \
-}
+    }
 
 #define DEBUG_OBJECTS_COUNT_DEC(obj_name)  {                                    \
     DEBUG_OBJECTS_COUNTER_NAME(obj_name)--;                                     \
     debug_print_this(fmt("count %1%") % DEBUG_OBJECTS_COUNTER_NAME(obj_name));  \
-}
+    }
 
 #endif  // NDEBUG
 
 class DebugUtils {
 public:
-    static constexpr std::string_view methodName(const char* prettyFunc) {
-        const std::string_view prettyFunction(prettyFunc);
-        const size_t end = prettyFunction.find("(");
-        size_t begin = prettyFunction.rfind(" ", end);
+    // innaccurate, for debug purposes only!
+    static consteval std::string_view methodName(const char* prettyFunc) {
+        using str = std::string_view;
+        const str signature(prettyFunc);
 
-        if (begin == std::string_view::npos)
-            begin = 0;
-        else
-            begin++;
+        auto tokenizer = [](const str& v, char splitter, auto&& visitor) {
+            const str groups("()<>[]");
+            size_t tokenBegin = 0;
+            int depth = 0;
 
-        return prettyFunction.substr(begin, end - begin);
+            for (size_t i = 0; i < v.length() ; i++) {
+                if ((v[i] == splitter) && (depth == 0)) {
+                    const std::string_view token = v.substr(tokenBegin, i - tokenBegin);
+                    if (!visitor(token))
+                        return;
+
+                    tokenBegin = i + 1;
+                }
+
+                for (size_t j = 0 ; j < groups.length() ; j += 2) {
+                    if (v[i] == groups[j]) {
+                        depth++;
+                    } else if (v[i] == groups[j + 1]) {
+                        depth--;
+                    }
+                }
+            }
+
+            if (tokenBegin < v.length())
+                visitor(v.substr(tokenBegin));
+        };
+
+        std::string_view classMethod = signature;
+
+        // try to find class::method word
+        tokenizer(signature, ' ', [&classMethod](const std::string_view& v) {
+            // skip [....
+            if (*v.begin() != '[')
+                classMethod = v;
+
+            return true;
+        });
+
+        std::string_view withoutArgs = classMethod;
+
+        // trim arguments part
+        tokenizer(classMethod, '(', [&withoutArgs](const std::string_view& v) {
+            withoutArgs = v;
+            return false;
+        });
+
+        return withoutArgs;
     }
 };
 

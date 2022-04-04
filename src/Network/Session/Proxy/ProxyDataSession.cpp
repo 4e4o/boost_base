@@ -5,16 +5,22 @@
 #include "Misc/Debug.hpp"
 
 using namespace std::literals::chrono_literals;
+using namespace boost::system;
 
-#define ACTIVITY_TIMEOUT  10s
+#define WAIT_SOCKET_UNUSED  10s
 
 // FIXME increase read buffer ?
 
 ProxyDataSession::ProxyDataSession(Socket* s)
     : Session(s),
-      m_activityDetect(false),
-      m_activity(false) {
+      m_state(State::READ),
+      m_otherDone(false) {
     debug_print_this("");
+
+    // Не закрываем сокет после завершения работы текущей сессии,
+    // так как другая сессия всё ещё может писать в текущий сокет.
+    // Закрываем сокеты позже.
+    setAutoClose(false);
 }
 
 ProxyDataSession::~ProxyDataSession() {
@@ -25,30 +31,33 @@ void ProxyDataSession::setOther(TProxyDataSession o) {
     m_other = o;
 }
 
-void ProxyDataSession::otherDone() {
-    spawn<true>([this]() -> TAwaitVoid {
-        // другой остановился.
-        // сразу не останавливаемся сами
-        // определяем активность цикла пересылки и закрываемся при неактивном -
-        // чтоб не оборвать передачу на может быть еще живой другой конец.
-        // (другой может остановиться по экзепшну на записи но сам еще может
-        // быть писабельный)
+TAwaitVoid ProxyDataSession::onStop() {
+    // в случае стопа сразу стопаем другую сессию
+    TProxyDataSession other = m_other.lock();
 
-        // активируем детектор активности
-        m_activityDetect = true;
-        m_activity = false;
+    if (other) {
+        other->stop();
+    }
 
-        while(running()) {
-            co_await wait(ACTIVITY_TIMEOUT);
+    co_return;
+}
 
-            // no activity
-            if (!m_activity) {
-                stop();
-                break;
-            }
-
-            m_activity = false;
+void ProxyDataSession::otherDone(State lastState) {
+    post<true>([this, lastState]() {
+        if (lastState == State::READ) {
+            debug_print_this("done on READ, stopping...");
+            // другой умер на чтении
+            // значит другой сокет уже неписабельный, просто стопаемся
+            stop();
+        } else {
+            debug_print_this("done on WRITE, nothing to do...");
+            // другой умер на записи
+            // другой сокет всё еще может быть писабельный
+            // а этот уже не читаемый, так что текущий не зависнет на чтении
+            // ничё не делаем, пусть запись завершается если была таковая
         }
+
+        m_otherDone = true;
     });
 }
 
@@ -61,21 +70,29 @@ TAwaitVoid ProxyDataSession::work() {
         throwGenericCoroutineError();
     }
 
-    ScopeGuard stopOther([other] {
-        other->otherDone();
+    ScopeGuard sg([this, other]() {
+        // мы последние завершились
+        if (m_otherDone) {
+            debug_print_this("we are last, closing sockets");
+            // закрываем сокеты
+            // так как автоматически они не будут закрыты
+            this->close();
+            other->close();
+        } else {
+            // говорим другой сессии что мы завершились
+            debug_print_this("notify other we are done");
+            other->otherDone(m_state);
+        }
     });
 
-    while(running()) {
+    while(running() && !m_otherDone) {
         STRAND_ASSERT(this);
+        m_state = State::READ;
         auto size = co_await reader().some();
+        m_state = State::WRITE;
         STRAND_ASSERT(this);
         co_await other->writer().all(reader().ptr(), size);
-
-        if (m_activityDetect) {
-            m_activity = true;
-        }
     }
 
-    //debug_print_this("end");
     co_return;
 }

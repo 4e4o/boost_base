@@ -4,12 +4,11 @@
 #include "AsyncProxyProviderDelegate.hpp"
 #include "Network/Session/ISessionProvider.hpp"
 #include "Misc/IntrusiveListHelpers.hpp"
+#include "Coroutine/AwaitableEventForward.hpp"
 #include "Coroutine/Awaitables.hpp"
 #include "Coroutine/Spawn.hpp"
 
 #include <unordered_map>
-
-class AwaitableEvent;
 
 class AsyncProxyProvider : public CoroutineSpawn, public ISessionProvider {
 public:
@@ -26,7 +25,7 @@ private:
     struct TRequest : public TAutoUnlinkBaseListHook {
         TSession first;
         TSession second;
-        std::shared_ptr<AwaitableEvent> event;
+        TAwaitableEvent event;
     };
 
     typedef TIntrusiveListAutoUnlink<TRequest> TRequests;

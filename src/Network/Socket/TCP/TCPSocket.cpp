@@ -18,10 +18,15 @@ TCPSocket::TCPSocket(io_context &io)
     : TCPSocket(io, ip::tcp::socket(io)) {
 }
 
+void TCPSocket::setFastPreset(bool fastPreset) {
+    m_fastPreset = fastPreset;
+}
+
 TCPSocket::TCPSocket(boost::asio::io_context& io, ip::tcp::socket&& socket)
     : Socket(io),
       m_socket(new TSocket(std::move(socket))),
-      m_socketOwner(true) {
+      m_socketOwner(true),
+      m_fastPreset(true) {
 }
 
 TCPSocket::~TCPSocket() {
@@ -53,42 +58,39 @@ void TCPSocket::setKeepAlive(bool enable) {
     }
 }
 
-TAwaitVoid TCPSocket::co_start() {
-    co_await Socket::co_start();
-    setNagle(false);
-    setKeepAlive(true);
+TAwaitVoid TCPSocket::start() {
+    if (m_fastPreset) {
+        setNagle(false);
+        setKeepAlive(true);
+    }
+
     co_return;
 }
 
-TAwaitVoid TCPSocket::co_close() {
-    forceClose(*m_socket);
+TAwaitVoid TCPSocket::close() {
+    boost::system::error_code ec1, ec2;
+    m_socket->shutdown(ip::tcp::socket::shutdown_both, ec1);
+    m_socket->close(ec2);
     co_return;
 }
 
 TAwaitSize TCPSocket::co_readSome(uint8_t *ptr, const std::size_t& size) {
-    co_return co_await m_socket->async_read_some(buffer(ptr, size), use_awaitable);
+    return m_socket->async_read_some(buffer(ptr, size), use_awaitable);
 }
 
-TAwaitVoid TCPSocket::co_readAll(uint8_t* ptr, const std::size_t& size) {
-    co_await async_read(*m_socket, buffer(ptr, size), use_awaitable);
+TAwaitSize TCPSocket::co_readAll(uint8_t* ptr, const std::size_t& size) {
+    return async_read(*m_socket, buffer(ptr, size), use_awaitable);
 }
 
-TAwaitVoid TCPSocket::co_writeAll(const uint8_t* ptr, const std::size_t &size) {
-    co_await async_write(*m_socket, buffer(ptr, size), use_awaitable);
+TAwaitSize TCPSocket::co_writeAll(const uint8_t* ptr, const std::size_t &size) {
+    return async_write(*m_socket, buffer(ptr, size), use_awaitable);
 }
 
 void TCPSocket::cancel() {
-    debug_print_this("");
     boost::system::error_code ec;
     m_socket->cancel(ec);
 }
 
 Socket* TCPSocket::create(boost::asio::io_context& io) {
     return new TCPSocket(io);
-}
-
-void TCPSocket::forceClose(TSocket& sock) {
-    boost::system::error_code ec1, ec2;
-    sock.shutdown(ip::tcp::socket::shutdown_both, ec1);
-    sock.close(ec2);
 }

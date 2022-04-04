@@ -15,13 +15,13 @@ AsyncProxyProvider::~AsyncProxyProvider() {
 }
 
 void AsyncProxyProvider::asyncResponse(TSession second) {
-    spawn<true>([this, second]() -> TAwaitVoid {
+    post<true>([this, second]() {
         TSessionClass sClass = m_delegate->classify(second);
         auto rit = m_requests.find(sClass);
 
         if (rit == m_requests.end() || rit->second.empty()) {
             debug_print_this(fmt("no requests with sClass = %1%, %2%") % sClass % second.get());
-            co_return;
+            return;
         }
 
         TRequests& requests = rit->second;
@@ -32,7 +32,6 @@ void AsyncProxyProvider::asyncResponse(TSession second) {
 
         request.second = second;
         request.event->set();
-        co_return;
     });
 }
 

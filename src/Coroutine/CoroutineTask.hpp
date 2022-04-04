@@ -2,14 +2,10 @@
 #define COROUTINE_TASK_HPP
 
 #include "Spawn.hpp"
-#include "Awaitables.hpp"
 #include "CoroutineTimerHelpers.hpp"
 
-#include "Misc/TimeDuration.hpp"
 #include "Misc/Lifecycle.hpp"
 #include "Misc/ScopeGuard.hpp"
-
-#include <boost/signals2/signal.hpp>
 
 template<typename TResult, typename... Args>
 class CoroutineTask : public CoroutineSpawn, public CoroutineTimerHelpers {
@@ -38,11 +34,14 @@ public:
     template<typename CompletionToken = decltype(boost::asio::detached)>
     auto co_stop(CompletionToken ct = boost::asio::detached) {
         return spawn<true>([this]() -> TAwaitVoid {
+            STRAND_ASSERT(this);
+
             if (m_state == State::STOPPED)
                 co_return;
 
             m_state = State::STOPPED;
             co_await onStop();
+            STRAND_ASSERT(this);
 
             if (m_cancellation) {
                 m_cancellation();
@@ -60,6 +59,7 @@ protected:
     }
 
     bool running() const {
+        STRAND_ASSERT(this);
         return m_state == State::RUNNING;
     }
 
@@ -75,28 +75,39 @@ protected:
 
 private:
     TAwaitResult work(TSpawnCancellation cancel, Args... args) {
-        initTimer();
-
         using namespace boost::asio;
         using namespace boost::system;
+
+        initTimer();
 
         if (m_state != State::INITIAL) {
             throwGenericCoroutineError();
         }
 
         m_cancellation = cancel;
-        co_return co_await work0(args...);
-    }
-
-    TAwaitResult work0(Args... args) {
         ScopeGuard sg([this] {
+            STRAND_ASSERT(this);
+
             if (m_state != State::STOPPED) {
                 m_state = State::DONE;
             }
         });
 
         m_state = State::RUNNING;
-        co_return co_await run(args...);
+
+        try {
+            co_return co_await run(args...);
+        } catch(const system_error& e) {
+            // для operation_canceled останавливаем текущий таск
+            // это для случая когда один CoroutineTask ко-эвэйтит на другом таске.
+            // При остановке родительского таска стоп будет вызван явно, а вот во вложенные таски
+            // прийдет только сигнал отмены, чтоб уровнять состояния всех вложенных тасков - останавливаем.
+            if (e.code() == errc::operation_canceled) {
+                stop();
+            }
+
+            throw;
+        }
     }
 
     enum class State {
