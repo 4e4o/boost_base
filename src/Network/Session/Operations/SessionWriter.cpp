@@ -1,7 +1,6 @@
 #include "SessionWriter.hpp"
 #include "Network/Session/Session.hpp"
 #include "Network/Socket/Socket.hpp"
-#include "Misc/ScopeGuard.hpp"
 
 /*TAwaitVoid SessionWriter::all(std::vector<uint8_t>&& v) {
     if (v.size() > buffer().size())

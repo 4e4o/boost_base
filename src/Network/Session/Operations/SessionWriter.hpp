@@ -6,8 +6,6 @@
 
 // Адаптер для чтения из сессии
 
-class Session;
-
 // TODO remove it when bug will be fixed:
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=103871
 #define CO_SES_WRITE(s, ...) { \

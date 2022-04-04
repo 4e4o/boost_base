@@ -1,7 +1,6 @@
 #include "SessionReader.hpp"
 #include "Network/Session/Session.hpp"
 #include "Network/Socket/Socket.hpp"
-#include "Misc/ScopeGuard.hpp"
 
 TAwaitSize SessionReader::some(size_t maxSize) {
     const std::size_t size = std::min(maxSize, buffer().size());

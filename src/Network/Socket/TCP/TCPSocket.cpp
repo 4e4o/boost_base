@@ -68,6 +68,7 @@ TAwaitVoid TCPSocket::start() {
 }
 
 TAwaitVoid TCPSocket::close() {
+    debug_print_this("");
     boost::system::error_code ec1, ec2;
     m_socket->shutdown(ip::tcp::socket::shutdown_both, ec1);
     m_socket->close(ec2);

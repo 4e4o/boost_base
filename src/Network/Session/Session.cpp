@@ -15,7 +15,7 @@ INIT_DEBUG_OBJECTS_COUNT(sessions)
 
 Session::Session(Socket *s)
     : CoroutineTask(s->io()),
-      m_autoClose(true),
+      m_socketAutoClose(true),
       m_reader(new SessionReader(this)),
       m_writer(new SessionWriter(this)) {
     DEBUG_OBJECTS_COUNT_INC(sessions);
@@ -35,8 +35,8 @@ Socket* Session::releaseSocket() {
     return sock;
 }
 
-void Session::setAutoClose(bool autoClose) {
-    m_autoClose = autoClose;
+void Session::setSocketAutoClose(bool autoClose) {
+    m_socketAutoClose = autoClose;
 }
 
 void Session::setSocket(Socket* s) {
@@ -67,8 +67,8 @@ TAwaitVoid Session::run() {
     debug_print_this("start");
 
     ScopeGuard autoClose([this]() {
-        if (m_autoClose) {
-            close();
+        if (m_socketAutoClose) {
+            closeSocket();
         }
     });
 
@@ -84,7 +84,7 @@ TAwaitVoid Session::run() {
     co_return;
 }
 
-void Session::close() {
+void Session::closeSocket() {
     spawn<true>([this]() -> TAwaitVoid {
         try {
             co_await timeout(socket()->co_close(), getTimeout(Timeout::CLOSE));

@@ -6,8 +6,6 @@
 
 // Адаптер для чтения из сессии
 
-class Session;
-
 class SessionReader : public SessionOpBase {
 public:
     using SessionOpBase::SessionOpBase;

@@ -34,10 +34,10 @@ TAwaitVoid Proxy::run() {
     STRAND_ASSERT(this);
     TSession second = co_await timeout(m_provider->get(this), getTimeout(Timeout::GET_SESSION));
     STRAND_ASSERT(this);
-    m_first->setAutoClose(false);
+    m_first->setSocketAutoClose(false);
     co_await timeout(m_first->co_start(use_awaitable), getTimeout(Timeout::FIRST_WORK));
     STRAND_ASSERT(this);
-    second->setAutoClose(false);
+    second->setSocketAutoClose(false);
     co_await timeout(second->co_start(use_awaitable), getTimeout(Timeout::SECOND_WORK));
     STRAND_ASSERT(this);
     TProxyDataSession p1 = m_first->mutate<ProxyDataSession>();

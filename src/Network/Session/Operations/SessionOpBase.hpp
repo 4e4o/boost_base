@@ -19,7 +19,7 @@ public:
     void setBufferSize(const std::size_t&);
 
 protected:
-    static constexpr int DEFAULT_BUFFER_SIZE = 64 * 2 * 1024;
+    static constexpr int DEFAULT_BUFFER_SIZE = 128 * 1024;
 
     typedef std::vector<uint8_t> TBuffer;
 

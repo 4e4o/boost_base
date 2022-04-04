@@ -4,12 +4,7 @@
 #include "Misc/ScopeGuard.hpp"
 #include "Misc/Debug.hpp"
 
-using namespace std::literals::chrono_literals;
 using namespace boost::system;
-
-#define WAIT_SOCKET_UNUSED  10s
-
-// FIXME increase read buffer ?
 
 ProxyDataSession::ProxyDataSession(Socket* s)
     : Session(s),
@@ -20,7 +15,7 @@ ProxyDataSession::ProxyDataSession(Socket* s)
     // Не закрываем сокет после завершения работы текущей сессии,
     // так как другая сессия всё ещё может писать в текущий сокет.
     // Закрываем сокеты позже.
-    setAutoClose(false);
+    setSocketAutoClose(false);
 }
 
 ProxyDataSession::~ProxyDataSession() {
@@ -76,8 +71,8 @@ TAwaitVoid ProxyDataSession::work() {
             debug_print_this("we are last, closing sockets");
             // закрываем сокеты
             // так как автоматически они не будут закрыты
-            this->close();
-            other->close();
+            this->closeSocket();
+            other->closeSocket();
         } else {
             // говорим другой сессии что мы завершились
             debug_print_this("notify other we are done");
