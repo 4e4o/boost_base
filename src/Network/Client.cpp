@@ -89,6 +89,7 @@ Client::TAwaitResult Client::run(const std::string& ip, unsigned short port) {
 
             if (m_managedMode) {
                 m_session = session;
+                // для слотов newSession Client::connected == true
                 newSession(m_session);
 
                 ScopeGuard sg([this]() {
@@ -109,6 +110,9 @@ Client::TAwaitResult Client::run(const std::string& ip, unsigned short port) {
                     }
                 } catch(...) { }
             } else {
+                // для не менеджер режима тоже эмитим сигнал новой сессии
+                // чтоб юзабельно было в случае detached запуска клиента
+                newSession(session);
                 co_return session;
             }
         }
