@@ -110,8 +110,8 @@ Client::TAwaitResult Client::run(const std::string& ip, unsigned short port) {
                     }
                 } catch(...) { }
             } else {
-                // для не менеджер режима тоже эмитим сигнал новой сессии
-                // чтоб юзабельно было в случае detached запуска клиента
+                // для не менеджед режима тоже эмитим сигнал новой сессии,
+                // чтоб юзабельно было в случае detached запуска клиента.
                 newSession(session);
                 co_return session;
             }
