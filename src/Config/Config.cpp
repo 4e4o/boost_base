@@ -25,7 +25,7 @@ bool Config::readConfig(TItems& result, const std::string& config_file) {
         const auto& items = parsed_data.at(m_key);
 
         return parseArray(items.as_array(), result);
-    } catch (std::exception const& e) {
+    } catch (const std::exception& e) {
         AAP_LOG(fmt("Config parse error: %1%") % e.what());
         return false;
     }

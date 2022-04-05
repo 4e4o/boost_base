@@ -11,9 +11,9 @@ public:
     AsyncLogger(boost::asio::io_context&);
     ~AsyncLogger();
 
-    void log(const std::string&) override final;
-
 private:
+    void logImpl(const std::string&) override final;
+
     TAwaitResult run() override;
     TAwaitVoid onStop() override;
     void flush();

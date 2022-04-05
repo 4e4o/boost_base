@@ -1,21 +1,21 @@
 #ifndef DEBUG_HPP
 #define DEBUG_HPP
 
+#ifdef NDEBUG
+
+#define debug_print(...)
+#define debug_print_func(...)
+#define debug_print_this(...)
+
+#define INIT_DEBUG_OBJECTS_COUNT(...)
+#define DEBUG_OBJECTS_COUNT_INC(...)
+#define DEBUG_OBJECTS_COUNT_DEC(...)
+
+#else   // NDEBUG
+
 #include "AApplication.h"
 
 #include <string_view>
-
-#ifdef NDEBUG
-
-#define debug_print(...)            { }
-#define debug_print_func(...)       { }
-#define debug_print_this(...)       { }
-
-#define INIT_DEBUG_OBJECTS_COUNT    { }
-#define DEBUG_OBJECTS_COUNT_INC     { }
-#define DEBUG_OBJECTS_COUNT_DEC     { }
-
-#else   // NDEBUG
 
 #define METHOD_NAME             DebugUtils::methodName(__PRETTY_FUNCTION__)
 
@@ -35,8 +35,6 @@
     DEBUG_OBJECTS_COUNTER_NAME(obj_name)--;                                     \
     debug_print_this(fmt("count %1%") % DEBUG_OBJECTS_COUNTER_NAME(obj_name));  \
     }
-
-#endif  // NDEBUG
 
 class DebugUtils {
 public:
@@ -94,5 +92,7 @@ public:
         return withoutArgs;
     }
 };
+
+#endif  // NDEBUG
 
 #endif /* DEBUG_HPP */

@@ -2,6 +2,7 @@
 #define AWAITABLE_EVENT_HPP
 
 #include "Awaitables.hpp"
+#include "AwaitableEventForward.hpp"
 #include "Misc/IntrusiveListHelpers.hpp"
 #include "Misc/StrandExecutor.hpp"
 
@@ -15,13 +16,10 @@
 
 class AwaitableEvent : public std::enable_shared_from_this<AwaitableEvent> {
 public:
-    typedef std::shared_ptr<AwaitableEvent> TAwaitableEvent;
-
     AwaitableEvent(const TStrandExecutor&);
     ~AwaitableEvent();
 
     static constexpr auto Token = boost::asio::use_awaitable;
-//    static constexpr auto Token = boost::asio::use_awaitable_t<TStrandExecutor>();
 
     typedef void(THandlerSignature)(const boost::system::error_code&);
     typedef decltype(Token) TToken;
@@ -29,8 +27,7 @@ public:
     typedef TAsyncResult::return_type TReturn;
 
     void set();
-//    TReturn co_wait();
-    TAwaitVoid co_wait();
+    TReturn co_wait();
 
 private:
     typedef TAsyncResult::handler_type THandler;

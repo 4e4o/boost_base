@@ -56,9 +56,8 @@ Client::TAwaitResult Client::run(const std::string& ip, unsigned short port) {
             debug_print_this("connecting...");
 
             STRAND_ASSERT(this);
-            //            co_await timeout(socket.async_connect(endpoint, deferred), m_connect);
+            //  co_await timeout(socket.async_connect(endpoint, deferred), m_connect);
             co_await timeout(socket.async_connect(endpoint, use_awaitable), m_connect);
-            STRAND_ASSERT(this);
             connected = true;
         } catch(const system_error& e) {
             debug_print_this(fmt("connect error = %1%") % e.what());
@@ -81,49 +80,49 @@ Client::TAwaitResult Client::run(const std::string& ip, unsigned short port) {
             }
         }
 
-        if (!running())
-            break;
-
         STRAND_ASSERT(this);
 
         if (connected) {
             debug_print_this("connect success");
             TCPSocket *sock = create<TCPSocket, io_context&, ip::tcp::socket&&>(io(), std::move(socket));
             TSession session(create<Session, Socket*>(sock));
-            m_session = session;
-
-            if (m_handler) {
-                m_handler(session);
-            }
 
             if (m_managedMode) {
-                STRAND_ASSERT(this);
+                m_session = session;
+                newSession(m_session);
+
+                ScopeGuard sg([this]() {
+                    auto s = m_session;
+                    // сбрасываем вручную вик поинтер чтоб
+                    // для слотов sessionCompleted было верно: Client::connected == false
+                    m_session.reset();
+                    sessionCompleted(s);
+                });
+
                 // в менеджед случае надо все исключения сессии съедать и переподключаться до остановки
                 try {
                     co_await session->co_start(use_awaitable);
+                } catch(const system_error& e) {
+                    // отмену не игнорируем, она только при стопе происходит
+                    if (e.code() == errc::operation_canceled) {
+                        throw;
+                    }
                 } catch(...) { }
-                STRAND_ASSERT(this);
             } else {
                 co_return session;
             }
         }
 
-        if (!running())
-            break;
+        // не managedMode режим до сюда не доходит
+        assert(m_managedMode);
 
-        if (m_managedMode) {
-            STRAND_ASSERT(this);
-            debug_print_this(fmt("waiting for next attempt %1%ms") % m_reconnect->count());
-            co_await wait(*m_reconnect);
-            STRAND_ASSERT(this);
-        } else {
-            co_return TSession();
-        }
+        STRAND_ASSERT(this);
+        debug_print_this(fmt("waiting for next attempt %1%ms") % m_reconnect->count());
+        co_await wait(*m_reconnect);
+        STRAND_ASSERT(this);
     }
 
-    co_return TSession();
-}
-
-void Client::setHandler(const TNewSessionHandler &handler) {
-    m_handler = handler;
+    // чтоб пустую результат не возвращать выкидываем исключение
+    throwGenericCoroutineError();
+    co_return TSession(); // для подавления ворнинга
 }

@@ -1,5 +1,4 @@
 #include "AsyncLogger.hpp"
-#include "Misc/TimeUtils.hpp"
 
 using namespace std::literals::chrono_literals;
 
@@ -18,16 +17,12 @@ TAwaitVoid AsyncLogger::onStop() {
     co_return;
 }
 
-void AsyncLogger::log(const std::string& msg) {
-    const std::string newMsg = "[" + TimeUtils::nowTimeOnly() + "] " + msg;
-
+void AsyncLogger::logImpl(const std::string& msg) {
     // юзаем мьютекс а не пост чтоб иметь
     // возможность по завершению программы выводить заключительные логи без
     // запущенных io_context
-    {
-        std::lock_guard lg(m_mutex);
-        m_logs.push(newMsg);
-    }
+    std::lock_guard lg(m_mutex);
+    m_logs.push(msg);
 }
 
 void AsyncLogger::flush() {
@@ -51,7 +46,7 @@ void AsyncLogger::flush() {
             oneMsg += "\n";
     }
 
-    SimpleLogger::log(oneMsg);
+    SimpleLogger::logImpl(oneMsg);
     fflush(stdout);
 }
 

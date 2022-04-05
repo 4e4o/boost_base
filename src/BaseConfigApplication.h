@@ -14,13 +14,10 @@ class AsyncLogger;
 
 class BaseConfigApplication : public AApplication {
 public:
-    BaseConfigApplication(const std::string&,
-                          int argc, char** argv);
+    BaseConfigApplication(int argc, char** argv);
     ~BaseConfigApplication();
 
     int exec() override final;
-
-    ILogger* logger() const override;
 
     Config* config();
 

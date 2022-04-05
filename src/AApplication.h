@@ -1,7 +1,7 @@
 #ifndef AAPPLICATION_H
 #define AAPPLICATION_H
 
-#include "Logger/ILogger.hpp"
+#include "Logger/ALogger.hpp"
 
 #include <boost/program_options.hpp>
 
@@ -10,11 +10,10 @@
 
 class AApplication {
 public:
-    AApplication(const std::string&,
-                 int argc, char** argv);
+    AApplication(int argc, char** argv);
     ~AApplication();
 
-    virtual ILogger* logger() const;
+    ALogger* logger() const;
 
     virtual int exec();
     void quit();
@@ -27,13 +26,17 @@ protected:
     boost::program_options::variables_map parseCmdLine(boost::program_options::options_description&);
     virtual void onExitRequest();
 
+    // don't forget to call resetLogger when new logger is being detroyed!
+    void setLogger(ALogger*);
+    void resetLogger();
+
 private:
     friend class AApPrivateAccessor;
 
     int m_argc;
     char** m_argv;
-    std::string m_progName;
-    std::unique_ptr<ILogger> m_logger;
+    ALogger* m_currentLogger;
+    std::unique_ptr<ALogger> m_defaultLogger;
 
     static AApplication* m_app;
 };

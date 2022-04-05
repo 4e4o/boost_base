@@ -12,7 +12,7 @@ SimpleLogger::SimpleLogger(bool autoFlush)
 SimpleLogger::~SimpleLogger() {
 }
 
-void SimpleLogger::log(const std::string &msg) {
+void SimpleLogger::logImpl(const std::string &msg) {
 #ifdef LOG_TO_CONSOLE
     printf("%s\n", msg.c_str());
     if (m_autoFlush) {

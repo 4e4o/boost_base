@@ -32,10 +32,11 @@ static void setSignalHandler(int sig, __sighandler_t h) {
     sigaction(sig, &action, NULL);
 }
 
-AApplication::AApplication(const std::string& name, int argc, char** argv)
+AApplication::AApplication(int argc, char** argv)
     : m_argc(argc), m_argv(argv),
-      m_progName(name), m_logger(new SimpleLogger()) {
+      m_defaultLogger(new SimpleLogger()) {
     m_app = this;
+    resetLogger();
 }
 
 AApplication::~AApplication() {
@@ -62,12 +63,20 @@ variables_map AApplication::parseCmdLine(options_description& desc) {
         notify(vm);
         return vm;
     } catch(std::exception& ex) {
-        AAP_LOG("Error parsing command line arguments");
+        AAP_LOG(fmt("Error parsing command line arguments %1%") % ex.what());
     }
 
     return variables_map();
 }
 
-ILogger* AApplication::logger() const {
-    return m_logger.get();
+void AApplication::setLogger(ALogger* l) {
+    m_currentLogger = l;
+}
+
+void AApplication::resetLogger() {
+    m_currentLogger = m_defaultLogger.get();
+}
+
+ALogger* AApplication::logger() const {
+    return m_currentLogger;
 }

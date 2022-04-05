@@ -90,6 +90,8 @@ void Session::closeSocket() {
             co_await timeout(socket()->co_close(), getTimeout(Timeout::CLOSE));
         } catch (const std::exception& e) {
             debug_print_this(fmt("socket close exception %1%") % e.what());
-        } catch(...) { }
+        } catch(...) {
+            debug_print_this("socket close unknown exception");
+        }
     });
 }

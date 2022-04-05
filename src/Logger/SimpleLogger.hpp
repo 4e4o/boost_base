@@ -1,14 +1,15 @@
 #ifndef SIMPLE_LOGGER_HPP
 #define SIMPLE_LOGGER_HPP
 
-#include "ILogger.hpp"
+#include "ALogger.hpp"
 
-class SimpleLogger : public ILogger {
+class SimpleLogger : public ALogger {
 public:
     SimpleLogger(bool autoFlush = true);
     ~SimpleLogger();
 
-    void log(const std::string&) override;
+protected:
+    void logImpl(const std::string&) override;
 
 private:
     const bool m_autoFlush;

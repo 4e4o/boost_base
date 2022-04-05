@@ -17,9 +17,8 @@ public:
     bool connected() const;
     void setConnectTimeout(const TTimeDuration &);
 
-    typedef std::function<void(TWSession)> TNewSessionHandler;
-
-    void setHandler(const TNewSessionHandler &handler);
+    boost::signals2::signal<void(TWSession)> newSession;
+    boost::signals2::signal<void(TWSession)> sessionCompleted;
 
 protected:
     TAwaitResult run(const std::string& ip, unsigned short port) override;
@@ -29,7 +28,6 @@ private:
     const bool m_managedMode;
     TTimeDuration m_connect;
     const TTimeDuration m_reconnect;
-    TNewSessionHandler m_handler;
 };
 
 #endif // CLIENT_H

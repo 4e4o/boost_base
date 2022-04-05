@@ -27,7 +27,7 @@ void AwaitableEvent::set() {
     });
 }
 
-TAwaitVoid AwaitableEvent::co_wait() {
+AwaitableEvent::TReturn AwaitableEvent::co_wait() {
     auto initiate = [this](auto&& handler) mutable {
         std::lock_guard l(m_mutex);
         associated_cancellation_slot_t<THandler> slot = get_associated_cancellation_slot(handler);

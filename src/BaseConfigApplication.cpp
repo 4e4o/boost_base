@@ -8,21 +8,15 @@
 using namespace boost::asio;
 using namespace boost::program_options;
 
-BaseConfigApplication::BaseConfigApplication(const std::string& name,
-                                             int argc, char** argv)
-    : AApplication(name, argc, argv),
-      m_threadPool(new ThreadPool()),
-      m_logger(new AsyncLogger(io())),
+BaseConfigApplication::BaseConfigApplication(int argc, char** argv)
+    : AApplication(argc, argv),
       m_config(new Config()) {
     debug_print_this("");
 }
 
 BaseConfigApplication::~BaseConfigApplication() {
+    resetLogger();
     debug_print_this("");
-}
-
-ILogger* BaseConfigApplication::logger() const {
-    return m_logger.get();
 }
 
 bool BaseConfigApplication::processArgs() {
@@ -47,6 +41,10 @@ int BaseConfigApplication::exec() {
     if (!processArgs())
         return 1;
 
+    m_threadPool.reset(new ThreadPool());
+    m_logger.reset(new AsyncLogger(io()));
+    setLogger(m_logger.get());
+
     AApplication::exec();
 
     try {
@@ -61,8 +59,8 @@ int BaseConfigApplication::exec() {
         m_logger->start();
         m_threadPool->run();
         m_threadPool->stop(true);
-    } catch (std::exception& e) {
-        AAP_LOG(fmt("%1% exception %2%") % METHOD_NAME % e.what());
+    } catch (const std::exception& e) {
+        AAP_LOG(fmt("BaseConfigApplication exec exception %1%") % e.what());
     }
 
     return 0;
