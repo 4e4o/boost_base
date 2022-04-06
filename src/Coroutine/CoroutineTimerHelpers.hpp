@@ -13,10 +13,6 @@ protected:
     CoroutineTimerHelpers(CoroutineSpawn* s)
         : m_spawn(s) { }
 
-    void initTimers() {
-
-    }
-
     static constexpr auto deferred = boost::asio::experimental::deferred;
     static constexpr auto use_awaitable = boost::asio::use_awaitable;
 
