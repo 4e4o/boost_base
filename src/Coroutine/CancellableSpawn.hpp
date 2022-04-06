@@ -13,7 +13,7 @@ auto cancellable_spawn(Executor ex, Callable&& callable, CompletionToken&& token
     using namespace boost::asio;
 
     typedef typename CallableTraits<Callable>::result_type TCallableResult;
-    typedef typename detail::awaitable_signature<TCallableResult>::type TSpawnHandlerSignature;
+    typedef typename boost::asio::detail::awaitable_signature<TCallableResult>::type TSpawnHandlerSignature;
 
     if (cancellation == nullptr) {
         cancellation.reset(new TSCancellationSignal(ex));

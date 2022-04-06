@@ -1,5 +1,5 @@
-#ifndef COROUTINE_TIMER_HELPERS_HPP
-#define COROUTINE_TIMER_HELPERS_HPP
+#ifndef TIMED_SPAWN_HPP
+#define TIMED_SPAWN_HPP
 
 #include "Awaitables.hpp"
 #include "Concepts.hpp"
@@ -8,10 +8,9 @@
 
 #include <boost/asio/use_awaitable.hpp>
 
-class CoroutineTimerHelpers {
+class TimedCoroutineSpawn : public CoroutineSpawn {
 protected:
-    CoroutineTimerHelpers(CoroutineSpawn* s)
-        : m_spawn(s) { }
+    using CoroutineSpawn::CoroutineSpawn;
 
     static constexpr auto deferred = boost::asio::experimental::deferred;
     static constexpr auto use_awaitable = boost::asio::use_awaitable;
@@ -42,7 +41,7 @@ protected:
         using namespace boost::asio;
 
         if (timeout.has_value()) {
-            auto deferredOp = m_spawn->spawn([op = std::move(op)]() mutable -> Op {
+            auto deferredOp = spawn([op = std::move(op)]() mutable -> Op {
                 co_return co_await std::move(op);
             }, deferred);
 
@@ -53,13 +52,10 @@ protected:
     }
 
     TAwaitVoid wait(const TDurationUnit& d) {
-        boost::asio::steady_timer timer(m_spawn->executor());
+        boost::asio::steady_timer timer(executor());
         timer.expires_after(d);
         co_await timer.async_wait(use_awaitable);
     }
-
-private:
-    CoroutineSpawn *m_spawn;
 };
 
-#endif /* COROUTINE_TIMER_HELPERS_HPP */
+#endif /* TIMED_SPAWN_HPP */

@@ -1,19 +1,18 @@
 #ifndef COROUTINE_TASK_HPP
 #define COROUTINE_TASK_HPP
 
-#include "Spawn.hpp"
-#include "CoroutineTimerHelpers.hpp"
+#include "TimedSpawn.hpp"
 
 #include "Misc/Lifecycle.hpp"
 #include "Misc/ScopeGuard.hpp"
 
 template<typename TResult, typename... Args>
-class CoroutineTask : public CoroutineSpawn, public CoroutineTimerHelpers {
+class CoroutineTask : public TimedCoroutineSpawn {
 public:
     typedef boost::asio::awaitable<TResult> TAwaitResult;
 
     CoroutineTask(boost::asio::io_context &io)
-        : CoroutineSpawn(io), CoroutineTimerHelpers(this), m_state(State::INITIAL) { }
+        : TimedCoroutineSpawn(io), m_state(State::INITIAL) { }
     ~CoroutineTask() { }
 
     void start(Args&&... args) {
