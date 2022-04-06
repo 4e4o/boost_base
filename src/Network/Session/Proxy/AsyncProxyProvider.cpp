@@ -1,7 +1,6 @@
 #include "AsyncProxyProvider.hpp"
 #include "IProxySessionRequester.hpp"
 #include "Coroutine/AwaitableEvent.hpp"
-#include "Misc/ScopeGuard.hpp"
 #include "Misc/Debug.hpp"
 
 using namespace boost::asio;

@@ -44,7 +44,7 @@ private:
         template<class Callable, typename T>
         static auto createWrapper(Callable &&c, T& self) {
             typedef typename CallableTraits<Callable>::result_type TResult;
-            auto wrapper = [self, c = std::move(c)](Args&&... args) -> TResult {
+            auto wrapper = [self, c = std::move(c)](Args... args) -> TResult {
                 return c(std::forward<Args>(args)...);
             };
             return std::move(wrapper);

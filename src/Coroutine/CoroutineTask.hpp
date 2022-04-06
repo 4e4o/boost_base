@@ -22,7 +22,7 @@ public:
 
     template<typename CompletionToken = decltype(boost::asio::detached)>
     auto co_start(CompletionToken ct = boost::asio::detached, Args... args) {
-        return spawn<true>([this, args...](TSpawnCancellation cancel) -> TAwaitResult {
+        return spawn<true>([this, args...](TCancellationSignal cancel) -> TAwaitResult {
             co_return co_await work(cancel, args...);
         }, ct);
     }
@@ -44,7 +44,7 @@ public:
             STRAND_ASSERT(this);
 
             if (m_cancellation) {
-                m_cancellation();
+                m_cancellation->emit(boost::asio::cancellation_type::all);
             }
 
             m_stopped();
@@ -74,11 +74,9 @@ protected:
     }
 
 private:
-    TAwaitResult work(TSpawnCancellation cancel, Args... args) {
+    TAwaitResult work(TCancellationSignal cancel, Args... args) {
         using namespace boost::asio;
         using namespace boost::system;
-
-        initTimer();
 
         if (m_state != State::INITIAL) {
             throwGenericCoroutineError();
@@ -118,7 +116,7 @@ private:
     };
 
     State m_state;
-    TSpawnCancellation m_cancellation;
+    TCancellationSignal m_cancellation;
     boost::signals2::signal<void()> m_stopped;
 };
 

@@ -11,7 +11,7 @@
 class AApplication {
 public:
     AApplication(int argc, char** argv);
-    ~AApplication();
+    virtual ~AApplication();
 
     ALogger* logger() const;
 
@@ -40,5 +40,7 @@ private:
 
     static AApplication* m_app;
 };
+
+typedef std::unique_ptr<AApplication> TAApplication;
 
 #endif // AAPPLICATION_H

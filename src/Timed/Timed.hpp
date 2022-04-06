@@ -15,7 +15,6 @@
 
 template <typename CompletionToken>
 struct timed_token {
-    boost::asio::steady_timer* timer;
     TDurationUnit timeout;
     CompletionToken& token;
 };
@@ -28,7 +27,6 @@ struct timed_initiation {
             typename... InitArgs>
     void operator()(
             CompletionHandler handler,  // the generated completion handler
-            boost::asio::steady_timer* timer,
             const TDurationUnit& timeout,      // the timeout specified in our completion token
             Initiation&& initiation,    // the embedded operation's initiation (e.g. async_read)
             InitArgs&&... init_args)    // the arguments passed to the embedded initiation (e.g. the async_read's buffer argument etc)
@@ -46,16 +44,14 @@ struct timed_initiation {
 
         associated_cancellation_slot_t<CompletionHandler> slot = get_associated_cancellation_slot(handler);
 
-        auto timerEx = timer->get_executor();
-
-        assert(timerEx == ex);
+        auto alloc = get_associated_allocator(handler);
+        std::shared_ptr<steady_timer> timer = std::allocate_shared<steady_timer>(alloc, ex, timeout);
 
         slot.assign([timer](auto) {
             timer->cancel();
         });
 
         auto timerOp = bind_executor(ex, [timer, timeout](auto&& token) {
-            timer->expires_after(timeout);
             return timer->async_wait(std::forward<decltype(token)>(token));
         });
 
@@ -128,7 +124,6 @@ struct boost::asio::async_result<
         return asio::async_initiate<InnerCompletionToken, Signatures...>(
                     timed_initiation<Signatures...>{},
                     t.token,   // the underlying token
-                    t.timer,
                     t.timeout, // our timeout argument
                     std::forward<Initiation>(init),  // the underlying operation's initiation
                     std::forward<InitArgs>(init_args)... // that initiation's arguments
@@ -138,13 +133,13 @@ struct boost::asio::async_result<
 
 template <typename CompletionToken>
 timed_token<CompletionToken>
-timed(boost::asio::steady_timer* timer, const TDurationUnit& timeout, CompletionToken&& token) {
-    return timed_token<CompletionToken>{ timer, timeout, token };
+timed(const TDurationUnit& timeout, CompletionToken&& token) {
+    return timed_token<CompletionToken>{ timeout, token };
 }
 
 template <typename Op, typename CompletionToken>
-auto with_timeout(Op&& op, boost::asio::steady_timer* timer, const TDurationUnit& timeout, CompletionToken&& token) {
-    return std::forward<Op>(op)(timed(timer, timeout, std::forward<CompletionToken>(token)));
+auto with_timeout(Op&& op, const TDurationUnit& timeout, CompletionToken&& token) {
+    return std::forward<Op>(op)(timed(timeout, std::forward<CompletionToken>(token)));
 }
 
 #endif /* TIMED_HPP */

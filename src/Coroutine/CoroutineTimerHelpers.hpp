@@ -13,8 +13,8 @@ protected:
     CoroutineTimerHelpers(CoroutineSpawn* s)
         : m_spawn(s) { }
 
-    void initTimer() {
-        m_timer.reset(new boost::asio::steady_timer(m_spawn->executor()));
+    void initTimers() {
+
     }
 
     static constexpr auto deferred = boost::asio::experimental::deferred;
@@ -30,7 +30,7 @@ protected:
         using namespace boost::asio;
 
         if (timeout.has_value()) {
-            return with_timeout(std::forward<Op>(op), m_timer.get(), *timeout, use_awaitable);
+            return with_timeout(std::forward<Op>(op), *timeout, use_awaitable);
         }
 
         return std::forward<Op>(op)(use_awaitable);
@@ -50,20 +50,20 @@ protected:
                 co_return co_await std::move(op);
             }, deferred);
 
-            return with_timeout(std::move(deferredOp), m_timer.get(), *timeout, use_awaitable);
+            return with_timeout(std::move(deferredOp), *timeout, use_awaitable);
         }
 
         return std::move(op);
     }
 
     TAwaitVoid wait(const TDurationUnit& d) {
-        m_timer->expires_after(d);
-        co_await m_timer->async_wait(use_awaitable);
+        boost::asio::steady_timer timer(m_spawn->executor());
+        timer.expires_after(d);
+        co_await timer.async_wait(use_awaitable);
     }
 
 private:
     CoroutineSpawn *m_spawn;
-    std::unique_ptr<boost::asio::steady_timer> m_timer;
 };
 
 #endif /* COROUTINE_TIMER_HELPERS_HPP */
