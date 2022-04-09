@@ -5,7 +5,7 @@ project(boost_base LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL "ON" FORCE)
+#set(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL "ON" FORCE)
 
 set(Boost_USE_STATIC_LIBS ON CACHE BOOL "Use static boost libs")
 
@@ -13,8 +13,11 @@ set(Boost_USE_STATIC_LIBS ON CACHE BOOL "Use static boost libs")
 # in gcc release mode with o3 + coroutines fails on linker stage
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2" CACHE STRING "" FORCE)
 
-set(BOOST_ROOT "/mnt/disk2/workspace/coding/boost_1_78_0/boost-1.78.0_install/" CACHE PATH "Boost library path")
-set(Boost_NO_SYSTEM_PATHS on CACHE BOOL "Do not search system for Boost")
+#cmake -DBOOST_ROOT:PATH=/home/computer/workspace/boost-1.78.0_install/
+if(NOT DEFINED BOOST_ROOT)
+    set(BOOST_ROOT "/home/computer/workspace/boost-1.78.0_install/" CACHE PATH "Boost library path")
+    set(Boost_NO_SYSTEM_PATHS on CACHE BOOL "Do not search system for Boost")
+endif()
 
 find_package(Boost 1.78.0 REQUIRED COMPONENTS program_options system thread coroutine)
 find_package(OpenSSL REQUIRED)
